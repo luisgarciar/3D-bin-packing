@@ -1,6 +1,6 @@
 # 3D-bin-packing
 
-Repository for the Capstone Project: Solving the 3D-bin-packing problem with reinforcement learning.
+Repository for the Capstone Project: 3D Packing Optimization.
 
 Group Members: Luis García Ramos, Przemyslaw Sekula
 
