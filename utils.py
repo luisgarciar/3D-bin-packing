@@ -137,21 +137,16 @@ def plot_box(box: Type[Box], figure: Type[go.Figure] = None) -> Type[go.Figure]:
                          )
     return figure
 
+
 def plot_container(container: Type[Container], figure: Type[go.Figure] = None) -> Type[go.Figure]:
     position = container.position
     len_edges = self.len_edges
 
     pass
-
     # figure.add_trace(go.Scatter3d(x =[position_0, ]   ))
 
 
-    pass
-
-
 if __name__ == "__main__":
-    box = Box(id_= 0, position=[0, 0, 0], len_edges=[1, 2, 3])
+    box = Box(id_=0, position=[0, 0, 0], len_edges=[1, 2, 3])
     fig = plot_box(box)
     fig.show()
-
-
