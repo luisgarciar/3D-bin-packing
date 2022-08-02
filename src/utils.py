@@ -1,12 +1,11 @@
 """
 Utilities for the Bin Packing Problem
 """
-from typing import List, Type, Tuple, Any
+from typing import List, Type, Tuple, Any, Union
 import random as rd
 import numpy as np
 from copy import deepcopy
-from packing_engine import Box, Container
-import plotly.colors as colors
+from src.packing_engine import Box, Container
 import plotly.graph_objects as go
 
 
@@ -62,13 +61,13 @@ def boxes_generator(len_bin_edges: List[int], num_items: int = 64, seed: int = 4
     return items
 
 
-def generate_box_vertices(box: Type[Box]) -> Tuple[Any, Any, Any]:
-    """Generates the eight vertices of a box in the correct format to be plotted
+def generate_vertices(cuboid: Union[Type[Box], Type[Container]]) -> Tuple[Any, Any, Any]:
+    """Generates the vertices of a box or container in the correct format to be plotted
 
       Parameters
       ----------
-      box: Type[Box]
-          A Box object
+      cuboid: Type[Box] or Type[Container]
+          A cuboid (box or container object)
 
       Returns
       -------
@@ -76,15 +75,15 @@ def generate_box_vertices(box: Type[Box]) -> Tuple[Any, Any, Any]:
       A list of length three with the x,y,z coordinates of the box vertices
       """
     # Generate the list of vertices by adding the lengths of the edges in the coordinates
-    v0 = box.position
+    v0 = cuboid.position
     v0 = np.asarray(v0, dtype=np.int32)
-    v1 = v0 + np.asarray([box.len_edges[0], 0, 0], dtype=np.int32)
-    v2 = v0 + np.asarray([0, box.len_edges[1], 0], dtype=np.int32)
-    v3 = v0 + np.asarray([box.len_edges[0], box.len_edges[1], 0], dtype=np.int32)
-    v4 = v0 + np.asarray([0, 0, box.len_edges[2]], dtype=np.int32)
-    v5 = v1 + np.asarray([0, 0, box.len_edges[2]], dtype=np.int32)
-    v6 = v2 + np.asarray([0, 0, box.len_edges[2]], dtype=np.int32)
-    v7 = v3 + np.asarray([0, 0, box.len_edges[2]], dtype=np.int32)
+    v1 = v0 + np.asarray([cuboid.len_edges[0], 0, 0], dtype=np.int32)
+    v2 = v0 + np.asarray([0, cuboid.len_edges[1], 0], dtype=np.int32)
+    v3 = v0 + np.asarray([cuboid.len_edges[0], cuboid.len_edges[1], 0], dtype=np.int32)
+    v4 = v0 + np.asarray([0, 0, cuboid.len_edges[2]], dtype=np.int32)
+    v5 = v1 + np.asarray([0, 0, cuboid.len_edges[2]], dtype=np.int32)
+    v6 = v2 + np.asarray([0, 0, cuboid.len_edges[2]], dtype=np.int32)
+    v7 = v3 + np.asarray([0, 0, cuboid.len_edges[2]], dtype=np.int32)
 
     vertices = np.vstack((v0, v1, v2, v3, v4, v5, v6, v7)).T
     x, y, z = vertices[0, :], vertices[1, :], vertices[2, :]
@@ -106,47 +105,69 @@ def plot_box(box: Type[Box], figure: Type[go.Figure] = None) -> Type[go.Figure]:
          Type[go.Figure]
          """
     # Generate the coordinates of the vertices
-    x, y, z = generate_box_vertices(box)
+    x, y, z = generate_vertices(box)
     # The arrays i, j, k contain the indices of the triangles to be plotted (two per face of the box)
-    # The triangles have vertices (x[i[index]], y[j[index]], z[k[index]])
+    # The triangles have vertices (x[i[index]], y[j[index]], z[k[index]]), index = 0,1,..7.
     i = [1, 2, 5, 6, 1, 4, 3, 6, 1, 7, 0, 6]
     j = [0, 3, 4, 7, 0, 5, 2, 7, 3, 5, 2, 4]
     k = [2, 1, 6, 5, 4, 1, 6, 3, 7, 1, 6, 0]
+
     if figure is None:
-        figure = go.Figure(data=[
-            go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k,
-                      opacity=0.6, color='#DC143C',
-                      flatshading=True
-                      )
-        ]
-        )
-        figure.update_layout(
-            scene=dict(
-                xaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(x) + 1]),
-                yaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(y) + 1]),
-                zaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(z) + 1]),
-                aspectmode='cube'),
-            width=800,
-            margin=dict(r=20, l=10, b=10, t=10),
-        )
+        figure = go.Figure(data=[go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k,
+                                           opacity=0.6, color='#DC143C',
+                                           flatshading=True)])
+        figure.update_layout(scene=dict(xaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(x) + 1]),
+                                        yaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(y) + 1]),
+                                        zaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(z) + 1]),
+                                        aspectmode='cube'), width=800, margin=dict(r=20, l=10, b=10, t=10))
     else:
-        figure.add_trace(go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k,
-                                   opacity=0.6, color='#DC143C',
-                                   flatshading=True
-                                   )
-                         )
+        figure.add_trace(go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k, opacity=0.6, color='#DC143C',
+                                   flatshading=True))
     return figure
 
 
 def plot_container(container: Type[Container], figure: Type[go.Figure] = None) -> Type[go.Figure]:
-    position = container.position
-    len_edges = self.len_edges
+    """Adds the plot of a container to a given figure
 
-    pass
-    # figure.add_trace(go.Scatter3d(x =[position_0, ]   ))
+            Parameters
+            ----------
+            container: Type[Container]
+                A Container object
+            figure:
+                A plotly figure where the box should be plotted
+
+            Returns
+            -------
+            Type[go.Figure]
+            """
+    if figure is None:
+        figure = go.Figure()
+
+    # Generate all vertices and edge pairs
+    x, y, z = generate_vertices(container)
+    edge_pairs = [(0, 1), (0, 2), (0, 4), (1, 3), (1, 5), (2, 3), (2, 6), (3, 7), (4, 5), (4, 6), (5, 7), (6, 7)]
+
+    # Add a line between each pair of edges to the figure
+    for (i, j) in edge_pairs:
+        vert_x = np.array([x[i], x[j]])
+        vert_y = np.array([y[i], y[j]])
+        vert_z = np.array([z[i], z[j]])
+        figure.add_trace(go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=2)))
+
+    for box in container.boxes:
+        figure = plot_box(box, figure)
+
+    # Choose the visualization angle
+    camera = dict(eye=dict(x=2, y=2, z=0.1))
+
+    # Update figure properties for improved visualization
+    figure.update_layout(showlegend=False, scene_camera=camera)
+    return figure
 
 
 if __name__ == "__main__":
-    box = Box(id_=0, position=[0, 0, 0], len_edges=[1, 2, 3])
-    fig = plot_box(box)
+    box = Box([1, 2, 3], position=[0, 0, 0], id_=0)
+    container = Container([10, 10, 10], [0, 0, 0], id_=0)
+    container.boxes.append(box)
+    fig = plot_container(container)
     fig.show()

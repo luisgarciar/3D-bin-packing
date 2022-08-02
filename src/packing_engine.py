@@ -1,6 +1,5 @@
 """
 Packing Engine: Basic Classes for the Bin Packing Problem
-
 We follow the space representation depicted below, all coordinates and lengths of boxes and containers are integers.
 
     x: depth
@@ -22,7 +21,7 @@ We follow the space representation depicted below, all coordinates and lengths o
 """
 import numpy as np
 from copy import deepcopy
-from typing import List, Type
+from typing import List, Type, Union
 
 
 class Box:
@@ -30,7 +29,7 @@ class Box:
 
      Attributes
      ----------
-      id: int
+      id_: int
             id of the box
       position: int
             Coordinates of the position of the bottom-leftmost-deepest corner of the box
@@ -38,7 +37,7 @@ class Box:
             Lengths of the edges of the box
      """
 
-    def __init__(self, id_: int, position: List[int], len_edges: List[int]) -> None:
+    def __init__(self, len_edges: List[int], position: List[int], id_: int) -> None:
         """ Initializes a box object
 
         Parameters
@@ -59,9 +58,9 @@ class Box:
 
         self.position = position
         self.len_edges = len_edges
+        self.id_ = id_
 
-
-    def rotate(self, rotation: int):
+    def rotate(self, rotation: int) -> None:
         """Rotates the box in place
 
         Parameters
@@ -77,7 +76,7 @@ class Container:
     Attributes
     ----------
     id_: int
-        id_ of the containe
+        id of the container
     len_edges: List[int]
         Lengths of the edges of the container
     position: List[int], optional
@@ -88,7 +87,7 @@ class Container:
         An array of size (len_x,len_y) representing the height map (top view) of the container
     """
 
-    def __init__(self, id_: int, len_edges: List[int], position=None) -> None:
+    def __init__(self, len_edges: List[int], position=None, id_: int = 0) -> None:
         """Initializes a 3D container
 
         Parameters
@@ -100,13 +99,18 @@ class Container:
         len_edges: int
             Lengths of the edges of the container
         """
+
         if position is None:
             position = [0, 0, 0]
+
+        assert len(len_edges) == len(position), "Sizes of len_edges and position do not match"
+        assert len(len_edges) == 3, "Size of len_edges is different from 3"
+
         self.id_ = id_
         self.position = position
         self.len_edges = len_edges
         self.boxes = []
-        self.height_map = np.zeros(shape=(len_x, len_y))
+        self.height_map = np.zeros(shape=(len_edges[0], len_edges[1]))
 
     def reset(self):
         """Resets the container to an empty state"""

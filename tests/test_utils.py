@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import utils
+from src import utils
 import random as rd
 
 # Data for random tests
