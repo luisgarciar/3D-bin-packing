@@ -124,6 +124,7 @@ class Container:
         box: Box
         Box to be placed inside the container
         """
+
         pass
 
     def get_height_map(self):
