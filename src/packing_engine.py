@@ -12,7 +12,7 @@ We follow the space representation depicted below, all coordinates and lengths o
        |________Y
       /
      /
-    X
+    Xn
 
     Classes:
         Box
@@ -56,8 +56,8 @@ class Box:
         assert len(len_edges) == len(position), "Sizes of len_edges and position do not match"
         assert len(len_edges) == 3, "Size of len_edges is different from 3"
 
-        self.position = position
-        self.len_edges = len_edges
+        self.position = np.asarray(position)
+        self.len_edges = np.asarray(len_edges)
         self.id_ = id_
 
     def rotate(self, rotation: int) -> None:
@@ -101,41 +101,42 @@ class Container:
         """
 
         if position is None:
-            position = [0, 0, 0]
+            position = np.zeros(shape=3, dtype=np.int32)
 
         assert len(len_edges) == len(position), "Sizes of len_edges and position do not match"
         assert len(len_edges) == 3, "Size of len_edges is different from 3"
 
         self.id_ = id_
-        self.position = position
-        self.len_edges = len_edges
+        self.position = np.asarray(position, dtype=np.int32)
+        self.len_edges = np.asarray(len_edges, dtype=np.int32)
         self.boxes = []
-        self.height_map = np.zeros(shape=(len_edges[0], len_edges[1]))
+        self.height_map = np.zeros(shape=(len_edges[0], len_edges[1]), dtype=np.int32)
 
     def reset(self):
         """Resets the container to an empty state"""
         self.boxes = []
-        self.height_map = np.zeros(shape=self.height_map.shape())
+        self.height_map = np.zeros_like(self.height_map.shape(), dtype=np.int32)
 
-    def update_height_map(self, box): #make static method??
+    def _update_height_map(self, box): #make static method??
         """ Updates the height map after placing a box
          Parameters
         ----------
         box: Box
         Box to be placed inside the container
         """
-
-        pass
+        self.height_map[box.position[0]: box.position[0] + box.len_edges[0],
+                        box.position[1]: box.position[1] + box.len_edges[1]] += box.len_edges[2]
 
     def get_height_map(self):
         """ Returns a copy of the height map of the container"""
         return deepcopy(self.height_map)
 
-    def check_valid_box_placement(self, box: Type[Box], new_position: List[int]): #Add different checkmodes?
+    def check_valid_box_placement(self, box: Type[Box], new_position: List[int], check_mode): #Add different checkmodes?
         pass
 
     def all_possible_positions(self, box: Type[Box]):
         pass
+
 
     def place_box(self, box: Type[Box], new_position: List[int]):
         pass
