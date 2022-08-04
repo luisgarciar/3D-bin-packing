@@ -4,7 +4,7 @@ from src.packing_engine import Box, Container
 import random as rd
 
 rd.seed(42)
-num_rd_tests = 20
+num_rd_tests = 5
 num_items = rd.sample(range(50, 81), num_rd_tests)
 height = rd.sample(range(1, 1 + num_rd_tests + 1), num_rd_tests)
 length = rd.sample(range(2, 2 + num_rd_tests + 1), num_rd_tests)
@@ -13,36 +13,93 @@ pos_x = rd.sample(range(0, num_rd_tests + 1), num_rd_tests)
 pos_y = rd.sample(range(0, num_rd_tests + 1), num_rd_tests)
 pos_z = rd.sample(range(0, num_rd_tests + 1), num_rd_tests)
 
-length_edges = [[height[j], length[j], width[j]] for j in range(num_rd_tests)]
-positions = [[pos_x[j], pos_y[j], pos_z[j]] for j in range(num_rd_tests)]
-testdata = [(length_edges[j], positions[j]) for j in range(num_rd_tests)]
+length_edges = zip(height, length, width)
+positions = zip(pos_x, pos_y, pos_z)
+test_data1 = zip(length_edges, positions)
+test_data2 = zip(length_edges, positions)
 
 
-# Test of initialization of Box class
-@pytest.mark.parametrize("len_edges,position", testdata)
-def test_box_initialization_random_data(len_edges, position):
-    box = Box(len_edges, position, 0)
-    assert (box.len_edges == len_edges and box.position == position and box.id_ == 0)
+# @pytest.fixture
+# def init_data(len_edges, position, cuboid):
+#     if cuboid == 'box':
+#         return Box(len_edges, position, 0)
+#     if cuboid == 'container':
+#         return Container(len_edges, position)
 
-
-# Test of initialization of Container class
-@pytest.mark.parametrize("len_edges,position", testdata)
+# # Test of initialization of Container class
+@pytest.mark.parametrize("len_edges, position", test_data1)
 def test_container_initialization_random_data(len_edges, position):
     container = Container(len_edges, position, 0)
-    assert (container.len_edges == len_edges and container.position == position and container.id_ == 0
-            and container.height_map.shape == (len_edges[0], len_edges[1]))
+    assert np.array_equal(container.len_edges, len_edges)
+    assert np.array_equal(container.position, position)
+    assert container.id_ == 0
+    assert container.height_map.shape == (len_edges[0], len_edges[1])
+
+num_items = rd.sample(range(50, 81), num_rd_tests)
+height = rd.sample(range(1, 1 + num_rd_tests + 1), num_rd_tests)
+length = rd.sample(range(2, 2 + num_rd_tests + 1), num_rd_tests)
+width = rd.sample(range(3, 3 + num_rd_tests + 1), num_rd_tests)
+pos_x = rd.sample(range(0, num_rd_tests + 1), num_rd_tests)
+pos_y = rd.sample(range(0, num_rd_tests + 1), num_rd_tests)
+pos_z = rd.sample(range(0, num_rd_tests + 1), num_rd_tests)
+
+length_edges = zip(height, length, width)
+positions = zip(pos_x, pos_y, pos_z)
+test_data2 = zip(length_edges, positions)
+
+# Test of initialization of Box class
+@pytest.mark.parametrize("len_edges, position", test_data2)
+def test_box_initialization_random_data(len_edges, position):
+    box = Box(len_edges, position, 0)
+    assert np.array_equal(box.len_edges, len_edges)
+    assert np.array_equal(box.position, position)
+    assert box.id_ == 0
+
+
+# Test of update_height_map
+container_len_edges = [[6, 6, 10], [6, 8, 10]]
+box_len_edges = [[2, 2, 5], [2, 8, 3]]
+box_pos = [[3, 3, 0], [2, 0, 0]]
+hm1 = np.array([[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 5, 5, 0],
+                [0, 0, 0, 5, 5, 0], [0, 0, 0, 0, 0, 0]], dtype=np.int32)
+hm2 = np.array([[0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [3, 3, 3, 3, 3, 3, 3, 3],
+               [3, 3, 3, 3, 3, 3, 3, 3], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.int32)
+height_map = [hm1, hm2]
+
+test_data3 = zip(container_len_edges, box_len_edges, box_pos, height_map)
+
+@pytest.mark.parametrize("container_len_edges, box_len_edges, box_pos, height_map", test_data3)
+def test_update_height_map(container_len_edges, box_len_edges, box_pos, height_map):
+    container = Container(container_len_edges)
+    box = Box(box_len_edges, box_pos, 0)
+    container._update_height_map(box)
+    new_height_map = container.height_map
+    assert np.array_equal(container.height_map, height_map)
+
+
 
 # Test of update_height_map with an empty container and a small box
 # (all dims of box smaller than half the dims of container)
 
+# container_length_edges = [6, 6, 10]
+# box_length_edges = [2, 2, 3]
+# box_position = [3, 3, 0]
+# height_map = np.zeros(shape=[container_length_edges[0], container_length_edges[1]], dtype=np.int32)
+# height_map[3:5, 3:5] = 3
+# height_map = np.array([[0, 0, 0, 0, 0, 0],
+#        [0, 0, 0, 0, 0, 0],
+#        [0, 0, 0, 0, 0, 0],
+#        [0, 0, 0, 3, 3, 0],
+#        [0, 0, 0, 3, 3, 0],
+#        [0, 0, 0, 0, 0, 0]])
+
+# def test_update_height_map_empty_container_small_box():
+# container = Container(len_edges_container)
 
 # Test of update_height_map with an empty container and a large box
 # (one dim of box equals one dim of container)
-
-
-# Test of update_height_map with a container with one box and a new box stacked on top
-
-
-# Test of update_height_map with a container with one box and a new box stacked next along the x dimension
-
-
+# container_length_edges = [6, 8, 10]
+# box_length_edges = [2, 8, 3]
+# box_position = [2, 0, 0]
+# height_map = np.zeros(shape=[container_length_edges[0], container_length_edges[1]], dtype=np.int32)
+# height_map[2, :] = 3
