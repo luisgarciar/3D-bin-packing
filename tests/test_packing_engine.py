@@ -19,13 +19,6 @@ test_data1 = zip(length_edges, positions)
 test_data2 = zip(length_edges, positions)
 
 
-# @pytest.fixture
-# def init_data(len_edges, position, cuboid):
-#     if cuboid == 'box':
-#         return Box(len_edges, position, 0)
-#     if cuboid == 'container':
-#         return Container(len_edges, position)
-
 # # Test of initialization of Container class
 @pytest.mark.parametrize("len_edges, position", test_data1)
 def test_container_initialization_random_data(len_edges, position):
@@ -47,6 +40,7 @@ length_edges = zip(height, length, width)
 positions = zip(pos_x, pos_y, pos_z)
 test_data2 = zip(length_edges, positions)
 
+
 # Test of initialization of Box class
 @pytest.mark.parametrize("len_edges, position", test_data2)
 def test_box_initialization_random_data(len_edges, position):
@@ -65,8 +59,8 @@ hm1 = np.array([[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 
 hm2 = np.array([[0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [3, 3, 3, 3, 3, 3, 3, 3],
                [3, 3, 3, 3, 3, 3, 3, 3], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.int32)
 height_map = [hm1, hm2]
-
 test_data3 = zip(container_len_edges, box_len_edges, box_pos, height_map)
+
 
 @pytest.mark.parametrize("container_len_edges, box_len_edges, box_pos, height_map", test_data3)
 def test_update_height_map(container_len_edges, box_len_edges, box_pos, height_map):
@@ -78,28 +72,3 @@ def test_update_height_map(container_len_edges, box_len_edges, box_pos, height_m
 
 
 
-# Test of update_height_map with an empty container and a small box
-# (all dims of box smaller than half the dims of container)
-
-# container_length_edges = [6, 6, 10]
-# box_length_edges = [2, 2, 3]
-# box_position = [3, 3, 0]
-# height_map = np.zeros(shape=[container_length_edges[0], container_length_edges[1]], dtype=np.int32)
-# height_map[3:5, 3:5] = 3
-# height_map = np.array([[0, 0, 0, 0, 0, 0],
-#        [0, 0, 0, 0, 0, 0],
-#        [0, 0, 0, 0, 0, 0],
-#        [0, 0, 0, 3, 3, 0],
-#        [0, 0, 0, 3, 3, 0],
-#        [0, 0, 0, 0, 0, 0]])
-
-# def test_update_height_map_empty_container_small_box():
-# container = Container(len_edges_container)
-
-# Test of update_height_map with an empty container and a large box
-# (one dim of box equals one dim of container)
-# container_length_edges = [6, 8, 10]
-# box_length_edges = [2, 8, 3]
-# box_position = [2, 0, 0]
-# height_map = np.zeros(shape=[container_length_edges[0], container_length_edges[1]], dtype=np.int32)
-# height_map[2, :] = 3

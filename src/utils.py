@@ -84,10 +84,8 @@ def generate_vertices(cuboid: Union[Type[Box], Type[Container]]) -> Tuple[Any, A
     v5 = v1 + np.asarray([0, 0, cuboid.len_edges[2]], dtype=np.int32)
     v6 = v2 + np.asarray([0, 0, cuboid.len_edges[2]], dtype=np.int32)
     v7 = v3 + np.asarray([0, 0, cuboid.len_edges[2]], dtype=np.int32)
-
     vertices = np.vstack((v0, v1, v2, v3, v4, v5, v6, v7)).T
-    x, y, z = vertices[0, :], vertices[1, :], vertices[2, :]
-    return x, y, z
+    return vertices
 
 
 def plot_box(box: Type[Box], figure: Type[go.Figure] = None) -> Type[go.Figure]:
@@ -105,7 +103,8 @@ def plot_box(box: Type[Box], figure: Type[go.Figure] = None) -> Type[go.Figure]:
          Type[go.Figure]
          """
     # Generate the coordinates of the vertices
-    x, y, z = generate_vertices(box)
+    vertices = generate_vertices(box)
+    x, y, z = vertices[0, :], vertices[1, :], vertices[2, :]
     # The arrays i, j, k contain the indices of the triangles to be plotted (two per each face of the box)
     # The triangles have vertices (x[i[index]], y[j[index]], z[k[index]]), index = 0,1,..7.
     i = [1, 2, 5, 6, 1, 4, 3, 6, 1, 7, 0, 6]
@@ -144,7 +143,8 @@ def plot_container(container: Type[Container], figure: Type[go.Figure] = None) -
         figure = go.Figure()
 
     # Generate all vertices and edge pairs, the numbering is explained in the function generate_vertices
-    x, y, z = generate_vertices(container)
+    vertices = generate_vertices(container)
+    x, y, z = vertices[0, :], vertices[1, :], vertices[2, :]
     edge_pairs = [(0, 1), (0, 2), (0, 4), (1, 3), (1, 5), (2, 3), (2, 6), (3, 7), (4, 5), (4, 6), (5, 7), (6, 7)]
 
     # Add a line between each pair of edges to the figure
