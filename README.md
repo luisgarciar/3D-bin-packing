@@ -1,10 +1,10 @@
-# 3D-bin-packing
+# 3D Bin Packing Optimization
 
 Repository for the Capstone Project 3D Packing Optimization of the [Fourthbrain Machine Learning Engineer program](https://www.fourthbrain.ai/machine-learning-engineer).
 
 Group Members: Luis García Ramos, Przemyslaw Sekula
 
-This repository contains an environment compatible with [OpenAI Gym's API](https://github.com/openai/gym) to solve the 3D packing problem with reinforcement learning (RL).
+This repository contains an environment compatible with [OpenAI Gym's API](https://github.com/openai/gym) to solve the 3D bin packing problem with reinforcement learning (RL).
 
 ## Problem definition and assumptions:
 The environment consists of a list of 3D boxes of varying sizes and a single container of fixed size. The goal is to pack as many boxes as possible in the container minimizing the empty volume. We assume that rotation of the boxes is not possible. 
