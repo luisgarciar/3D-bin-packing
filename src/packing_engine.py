@@ -83,6 +83,11 @@ class Box:
         return self.len_edges[0] * self.len_edges[1]
 
     @property
+    def volume(self) -> int:
+        """ Area of the bottom face of the box """
+        return self.len_edges[0] * self.len_edges[1]*self.len_edges[2]
+
+    @property
     def vertices(self) -> List[np.ndarray]:
         """Returns a list with the vertices of the box"""
         vert = generate_vertices(self.len_edges, self.position)
@@ -352,6 +357,27 @@ class Container:
         # Update figure properties for improved visualization
         figure.update_layout(showlegend=False, scene_camera=camera)
         return figure
+
+
+    def first_fit_decreasing(self, boxes: List[Type[Box]], check_area: int = 100) -> None:
+        """ Places all boxes in the container in the first fit decreasing order
+        Parameters
+        ----------
+        boxes: List[Box]
+            List of boxes to be placed
+        check_area: int, default = 100
+            Percentage of area of the bottom of the box that must be supported in the new position
+        """
+        # Sort the boxes in the decreasing order of their volume
+        boxes.sort(key=lambda x: x.volume, reverse=True)
+
+        for box in boxes:
+            # Find the position where the box can be placed
+            action_mask = self.all_possible_positions(box, check_area)
+            # Find the position where the box can be placed
+            new_position = np.unravel_index(np.argmax(action_mask), action_mask.shape)
+            # Place the box in the container
+            self.place_box(box, new_position, check_area)
 
 
 if __name__ == "__main__":

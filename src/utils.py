@@ -90,82 +90,8 @@ def generate_vertices(cuboid_len_edges, cuboid_position) -> NDArray[Shape["3, 8"
     vertices = np.vstack((v0, v1, v2, v3, v4, v5, v6, v7))
     return vertices
 
-#
-# def plot_box(box_len_edges, box_position, figure: Type[go.Figure] = None) -> Type[go.Figure]:
-#     """Adds the plot of a box to a given figure
-#
-#          Parameters
-#          ----------
-#          box: Type[Box]
-#              A Box object
-#          figure:
-#              A plotly figure where the box should be plotted
-#
-#          Returns
-#          -------
-#          Type[go.Figure]
-#          """
-#     # Generate the coordinates of the vertices
-#     vertices = generate_vertices(box_len_edges,box_position)
-#     x, y, z = vertices[0, :], vertices[1, :], vertices[2, :]
-#     # The arrays i, j, k contain the indices of the triangles to be plotted (two per each face of the box)
-#     # The triangles have vertices (x[i[index]], y[j[index]], z[k[index]]), index = 0,1,..7.
-#     i = [1, 2, 5, 6, 1, 4, 3, 6, 1, 7, 0, 6]
-#     j = [0, 3, 4, 7, 0, 5, 2, 7, 3, 5, 2, 4]
-#     k = [2, 1, 6, 5, 4, 1, 6, 3, 7, 1, 6, 0]
-#
-#     if figure is None:
-#         figure = go.Figure(data=[go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k,
-#                                            opacity=0.6, color='#DC143C',
-#                                            flatshading=True)])
-#         figure.update_layout(scene=dict(xaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(x) + 1]),
-#                                         yaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(y) + 1]),
-#                                         zaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(z) + 1]),
-#                                         aspectmode='cube'), width=800, margin=dict(r=20, l=10, b=10, t=10))
-#     else:
-#         figure.add_trace(go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k, opacity=0.6, color='#DC143C',
-#                                    flatshading=True))
-#     return figure
 
-
-# def plot_container(container: Type[Container], figure: Type[go.Figure] = None) -> Type[go.Figure]:
-#     """Adds the plot of a container to a given figure
-#
-#             Parameters
-#             ----------
-#             container: Type[Container]
-#                 A Container object
-#             figure:
-#                 A plotly figure where the box should be plotted
-#
-#             Returns
-#             -------
-#             Type[go.Figure]
-#             """
-#     if figure is None:
-#         figure = go.Figure()
-#
-#     # Generate all vertices and edge pairs, the numbering is explained in the function generate_vertices
-#     vertices = generate_vertices(container)
-#     x, y, z = vertices[0, :], vertices[1, :], vertices[2, :]
-#     edge_pairs = [(0, 1), (0, 2), (0, 4), (1, 3), (1, 5), (2, 3), (2, 6), (3, 7), (4, 5), (4, 6), (5, 7), (6, 7)]
-#
-#     # Add a line between each pair of edges to the figure
-#     for (i, j) in edge_pairs:
-#         vert_x = np.array([x[i], x[j]])
-#         vert_y = np.array([y[i], y[j]])
-#         vert_z = np.array([z[i], z[j]])
-#         figure.add_trace(go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=2)))
-#
-#     for box in container.boxes:
-#         figure = plot_box(box, figure)
-#
-#     # Choose the visualization angle
-#     camera = dict(eye=dict(x=2, y=2, z=0.1))
-#
-#     # Update figure properties for improved visualization
-#     figure.update_layout(showlegend=False, scene_camera=camera)
-#     return figure
+def first_fit_decreasing(cuboid_len_edges, cuboid_position) -> NDArray[Shape["3, 8"], Int]:
 
 
 if __name__ == "__main__":
