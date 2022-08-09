@@ -1,6 +1,6 @@
 # 3D-bin-packing
 
-Repository for the Capstone Project: 3D Packing Optimization.
+Repository for the Capstone Project 3D Packing Optimization of the [Fourthbrain Machine Learning Engineer program](https://www.fourthbrain.ai/machine-learning-engineer).
 
 Group Members: Luis García Ramos, Przemyslaw Sekula
 
