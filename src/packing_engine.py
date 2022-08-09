@@ -24,7 +24,7 @@ from copy import deepcopy
 from typing import List, Type, Any
 from nptyping import NDArray, Int, Shape
 from itertools import product
-from src.utils import generate_vertices
+from src.utils import generate_vertices, boxes_generator
 import plotly.graph_objects as go
 
 
@@ -358,7 +358,6 @@ class Container:
         figure.update_layout(showlegend=False, scene_camera=camera)
         return figure
 
-
     def first_fit_decreasing(self, boxes: List[Type[Box]], check_area: int = 100) -> None:
         """ Places all boxes in the container in the first fit decreasing order
         Parameters
@@ -372,17 +371,37 @@ class Container:
         boxes.sort(key=lambda x: x.volume, reverse=True)
 
         for box in boxes:
-            # Find the position where the box can be placed
+            # Find the positions where the box can be placed
             action_mask = self.all_possible_positions(box, check_area)
-            # Find the position where the box can be placed
-            new_position = np.unravel_index(np.argmax(action_mask), action_mask.shape)
-            # Place the box in the container
-            self.place_box(box, new_position, check_area)
 
+            # top lev is the maximum level where the box can be placed
+            # according to its height
+            top_lev = self.len_edges[2] - box.len_edges[2]
+            # max_occupied is the maximum height occupied by a box
+            max_occupied = np.max(self.height_map)
+            lev = min(top_lev,  max_occupied)
+
+            # We find the first position where the box can be placed starting from
+            # the top level and going down
+            k = lev
+            while k >= 0:
+                locations = np.zeros(shape=(self.len_edges[0], self.len_edges[1]), dtype=np.int32)
+                kth_level = np.logical_and(self.height_map == k,  action_mask == 1)
+                if kth_level.any():
+                    locations[kth_level] = 1
+                    # Find the first position where the box can be placed
+                    position = [np.nonzero(locations == 1)[0][0], np.nonzero(locations == 1)[1][0]]
+                    # Place the box in the first position found
+                    self.place_box(box, position, check_area)
+                    break
+                k -= 1
 
 if __name__ == "__main__":
-    box = Box([1, 2, 3], position=[0, 0, 0], id_=0)
-    container = Container([10, 10, 10], [0, 0, 0], id_=0)
-    container.boxes.append(box)
-    fig = container.plot()
-    fig.show()
+    len_bin_edges = [10, 10, 10]
+    # The boxes generated will fit exactly in a container of size [10,10,10]
+    boxes_sizes = boxes_generator(len_bin_edges, num_items=64, seed=42)
+    boxes = [Box(size, position=[-1, -1, -1], id_=i) for i, size in enumerate(boxes_sizes)]
+    # We pack the boxes in a bigger container since the heuristic rule is not optimal
+    container = Container([12, 12, 12])
+    # The parameter 'check_area' gives the percentage of the bottom area of the box that must be supported
+    container.first_fit_decreasing(boxes, check_area=100)

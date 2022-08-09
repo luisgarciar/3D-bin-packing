@@ -91,9 +91,6 @@ def generate_vertices(cuboid_len_edges, cuboid_position) -> NDArray[Shape["3, 8"
     return vertices
 
 
-def first_fit_decreasing(cuboid_len_edges, cuboid_position) -> NDArray[Shape["3, 8"], Int]:
-
-
 if __name__ == "__main__":
     box = Box([1, 2, 3], position=[0, 0, 0], id_=0)
     container = Container([10, 10, 10], [0, 0, 0], id_=0)

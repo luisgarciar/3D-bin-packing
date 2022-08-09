@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 from src.packing_engine import Box, Container
 import random as rd
+# from src.utils import boxes_generator
 
 rd.seed(42)
 num_rd_tests = 5
@@ -272,6 +273,24 @@ def test_all_possible_positions():
     hm4[0:3, 3:5] = 4
     hm4[0:3, 5:7] = 3
     np.testing.assert_array_equal(container.get_height_map(), hm4)
+
+
+def test_first_fit_decreasing():
+    # Create container and action mask for container
+    container = Container([10, 10, 10])
+    box0 = Box([3, 3, 3], [-1, -1, -1], 0)
+    box1 = Box([3, 2, 3], [-1, -1, -1], 1)
+    boxes = [box0, box1]
+    container.reset
+    container.first_fit_decreasing(boxes, 100)
+    box0 = container.boxes[0]
+    box1 = container.boxes[1]
+    np.testing.assert_array_equal(box0.position, [0, 0, 0])
+    np.testing.assert_array_equal(box1.position, [0, 0, 3])
+
+
+
+
 
 
 
