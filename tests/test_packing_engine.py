@@ -41,6 +41,7 @@ length_edges = zip(height, length, width)
 positions = zip(pos_x, pos_y, pos_z)
 test_data2 = zip(length_edges, positions)
 
+
 # Test of initialization of Box class
 @pytest.mark.parametrize("len_edges, position", test_data2)
 def test_box_initialization_random_data(len_edges, position):
@@ -129,6 +130,7 @@ def test_check_valid_box_placement(container_len_edges, box_len_edges, box_pos, 
     np.testing.assert_equal(is_valid2, valid)
 
 
+# Test to pack a sequence of boxes into a container
 def test_pack_boxes():
     box0 = Box([3, 3, 3], [0, 0, 0], 0)
     box1 = Box([3, 2, 3], [0, 0, 3], 1)
@@ -170,6 +172,121 @@ def test_pack_boxes():
     # Check that box4 is in the container in the right place
     container.place_box(box4, [0, 5])
     np.testing.assert_array_equal(container.boxes[4].position, np.asarray([0, 5, 0]))
+
+# box1 = Box([3, 2, 3], [-1, -1, -1], 1)
+# box2 = Box([3, 4, 2], [-1, -1, -1], 2)
+# box3 = Box([3, 2, 4], [-1, -1, -1], 3)
+# box4 = Box([3, 2, 3], [-1, -1, -1], 4)
+
+
+# Test of method Container.all_possible_positions with a sequence of boxes
+def test_all_possible_positions():
+    container = Container([10, 10, 10])
+
+    # Create box0 and action mask for box0
+    box0 = Box([3, 3, 3], [-1, -1, -1], 0)
+    box0_action_mask = np.zeros(shape=[10, 10], dtype=np.int32)
+    box0_action_mask[0:8, 0:8] = 1
+    # check all possible positions for box0
+    np.testing.assert_array_equal(container.all_possible_positions(box0, 100), box0_action_mask)
+    # place box0 at [0,0]
+    container.place_box(box0, [0, 0])
+    # check height map after placing box0
+    hm0 = np.zeros(shape=[10, 10], dtype=np.int32)
+    hm0[0:3, 0:3] = 3
+    np.testing.assert_array_equal(container.get_height_map(), hm0)
+
+    # Create box1 and action mask for box1
+    box1 = Box([3, 2, 3], [-1, -1, -1], 1)
+    box1_action_mask = np.ones(shape=[10, 10], dtype=np.int32)
+    box1_action_mask[1, 0:3] = 0
+    box1_action_mask[2, 0:3] = 0
+    box1_action_mask[0, 2] = 0
+    box1_action_mask[8, :] = 0
+    box1_action_mask[9, :] = 0
+    box1_action_mask[:, 9] = 0
+    # check all possible positions for box1
+    np.testing.assert_array_equal(container.all_possible_positions(box1, 100), box1_action_mask)
+    # place box1 at [0,0]
+    container.place_box(box1, [0, 0])
+    # check height map after placing box1
+    hm1 = np.zeros(shape=[10, 10], dtype=np.int32)
+    hm1[0:3, 0:2] = 6
+    hm1[0:3, 2] = 3
+    np.testing.assert_array_equal(container.get_height_map(), hm1)
+
+    # Create box2 and action_mask for box2
+    box2 = Box([3, 4, 2], [-1, -1, -1], 2)
+    box2_action_mask = np.zeros(shape=[10, 10], dtype=np.int32)
+    box2_action_mask[0:8, 0:7] = 1
+    box2_action_mask[0:3, 0:3] = 0
+    # check all possible positions for box2
+    np.testing.assert_array_equal(container.all_possible_positions(box2, 100), box2_action_mask)
+    # place box2 at [3,0]
+    container.place_box(box2, [3, 0])
+    # check height map after placing box2
+    hm2 = np.zeros(shape=[10, 10], dtype=np.int32)
+    hm2[0:3, 0:2] = 6
+    hm2[0:3, 2] = 3
+    hm2[3:6, 0:4] = 2
+    np.testing.assert_array_equal(container.get_height_map(), hm2)
+
+    # Create box3 and action_mask for box3
+    box3 = Box([3, 2, 4], [-1, -1, -1], 3)
+    box3_action_mask = np.zeros(shape=[10, 10], dtype=np.int32)
+    box3_action_mask[0:8, 0:9] = 1
+    box3_action_mask[0:6, 0:4] = 0
+    box3_action_mask[0, 0] = 1
+    box3_action_mask[0, 3] = 1
+    box3_action_mask[3, 0:3] = 1
+    # check all possible positions for box3
+    np.testing.assert_array_equal(container.all_possible_positions(box3, 100), box3_action_mask)
+    # place box3 at [0,3]
+    container.place_box(box3, [0, 3])
+    # check height map after placing box3
+    hm3 = np.zeros(shape=[10, 10], dtype=np.int32)
+    hm3[0:3, 0:2] = 6
+    hm3[0:3, 2] = 3
+    hm3[3:6, 0:4] = 2
+    hm3[0:3, 3:5] = 4
+    np.testing.assert_array_equal(container.get_height_map(), hm3)
+
+    # Create box4 and action_mask for box4
+    box4 = Box([3, 2, 3], [-1, -1, -1], 4)
+    box4_action_mask = np.zeros(shape=[10, 10], dtype=np.int32)
+    box4_action_mask[0:8, 0:9] = 1
+    box4_action_mask[0:6, 0:4] = 0
+    box4_action_mask[0, 0] = 1
+    box4_action_mask[0, 3] = 1
+    box4_action_mask[3, 0:3] = 1
+    box4_action_mask[0:3, 4] = 0
+    # check all possible positions for box4
+    np.testing.assert_array_equal(container.all_possible_positions(box4, 100), box4_action_mask)
+    # place box4 at [0,5]
+    container.place_box(box4, [0, 5])
+    # check height map after placing box4
+    hm4 = np.zeros(shape=[10, 10], dtype=np.int32)
+    hm4[0:3, 0:2] = 6
+    hm4[0:3, 2] = 3
+    hm4[3:6, 0:4] = 2
+    hm4[0:3, 3:5] = 4
+    hm4[0:3, 5:7] = 3
+    np.testing.assert_array_equal(container.get_height_map(), hm4)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

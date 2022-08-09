@@ -274,7 +274,8 @@ class Container:
         return 1
 
     def all_possible_positions(self, box: Type[Box], check_area: int = 100) -> NDArray[Shape["*, *"], Int]:
-        """ Returns a list with all possible positions for a box in the container
+        """ Returns an array with all possible positions for a box in the container
+            array[i,j] = 1 if the box can be placed in position (i,j), 0 otherwise
 
                Parameters
                ----------
@@ -302,6 +303,8 @@ class Container:
             Box to be placed
         new_position: List[int]
             Coordinates of new position
+        check_area
+
         """
         assert self.check_valid_box_placement(box, new_position, check_area) == 1, "Invalid position for box"
         # Check height_map to find the height at which the box will be placed
