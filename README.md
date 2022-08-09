@@ -18,8 +18,13 @@ The documentation for this project is located in the `doc` folder, with a comple
 ## Packing engine
 The module `packing_engine` (located in `src/packing_engine.py`) implements the `Container` and `Box` objects that are used in the Gym environment. To add custom features (for example, to allow rotations), see the documentation of this module.
 
+## Demo notebooks
+A demo notebook implementing the heuristic-based method 'First Fit Decreasing' is available in the `nb` folder.
+
 ## Unit tests
 The folder `tests` contains unit tests to be run with pytest.
+
+
 
 
 
