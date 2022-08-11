@@ -106,7 +106,7 @@ class Box:
              go.Figure
              """
         # Generate the coordinates of the vertices
-        vertices = generate_vertices(self.len_edges, self.position)
+        vertices = generate_vertices(self.len_edges, self.position).T
         x, y, z = vertices[0, :], vertices[1, :], vertices[2, :]
         # The arrays i, j, k contain the indices of the triangles to be plotted (two per each face of the box)
         # The triangles have vertices (x[i[index]], y[j[index]], z[k[index]]), index = 0,1,..7.
@@ -180,7 +180,7 @@ class Container:
     def reset(self):
         """Resets the container to an empty state"""
         self.boxes = []
-        self.height_map = np.zeros_like(self.height_map.shape, dtype=np.int32)
+        self.height_map = np.zeros(shape=[self.len_edges[0],self.len_edges[1]], dtype=np.int32)
 
     def _update_height_map(self, box):
         """Updates the height map after placing a box
@@ -213,7 +213,6 @@ class Container:
         -------
         int
         """
-        # Generate vertices of the bottom face of the box
         assert len(new_pos) == 2
 
         # Generate the vertices of the bottom face of the box
@@ -243,7 +242,7 @@ class Container:
         bottom_face_lev = self.height_map[v0[0]:v0[0] + box.len_edges[0], v0[1]:v0[1] + box.len_edges[1]]
 
         # Check that the level of the corners is the maximum of all points in the bottom face
-        if np.testing.assert_equal(lev, np.amax(bottom_face_lev)):
+        if np.array_equal(lev, np.amax(bottom_face_lev)) is False:
             return 0
 
         # Count how many of the points in the bottom face are supported at height equal to lev
@@ -293,11 +292,13 @@ class Container:
                -------
                np.array(np.int32)
                """
-    # Generate all possible positions for the box in the container
-        action_mask = np.zeros(shape=(self.len_edges[0], self.len_edges[1]), dtype=np.int32)
-        for i, j in product(range(self.len_edges[0]), range(self.len_edges[1])):
-            if self.check_valid_box_placement(box, [i, j], check_area) == 1:
-                action_mask[i, j] = 1
+
+        action_mask = np.zeros(shape=[self.len_edges[0], self.len_edges[1]], dtype=np.int32)
+        # Generate all possible positions for the box in the container
+        for i in range(0, self.len_edges[0]):
+            for j in range(0, self.len_edges[1]):
+                if self.check_valid_box_placement(box, [i, j], check_area) == 1:
+                    action_mask[i,j] = 1
         return action_mask
 
     def place_box(self, box: Type[Box], new_position: List[int], check_area = 100) -> None:
@@ -336,7 +337,7 @@ class Container:
             figure = go.Figure()
 
         # Generate all vertices and edge pairs, the numbering is explained in the function generate_vertices
-        vertices = generate_vertices(self.len_edges, self.position)
+        vertices = generate_vertices(self.len_edges, self.position).T
         x, y, z = vertices[0, :], vertices[1, :], vertices[2, :]
         edge_pairs = [(0, 1), (0, 2), (0, 4), (1, 3), (1, 5), (2, 3), (2, 6), (3, 7), (4, 5), (4, 6), (5, 7), (6, 7)]
 
@@ -396,6 +397,7 @@ class Container:
                     break
                 k -= 1
 
+
 if __name__ == "__main__":
     len_bin_edges = [10, 10, 10]
     # The boxes generated will fit exactly in a container of size [10,10,10]
@@ -405,3 +407,5 @@ if __name__ == "__main__":
     container = Container([12, 12, 12])
     # The parameter 'check_area' gives the percentage of the bottom area of the box that must be supported
     container.first_fit_decreasing(boxes, check_area=100)
+    fig = container.plot()
+    fig.show()
