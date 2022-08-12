@@ -23,10 +23,3 @@ A demo notebook implementing the heuristic-based method 'First Fit Decreasing' i
 
 ## Unit tests
 The folder `tests` contains unit tests to be run with pytest.
-
-
-
-
-
-
-
