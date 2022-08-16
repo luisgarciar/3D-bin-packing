@@ -127,7 +127,7 @@ class Box:
             figure.update_layout(scene=dict(xaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(x) + 1]),
                                             yaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(y) + 1]),
                                             zaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(z) + 1]),
-                                            aspectmode='cube'), width=800, margin=dict(r=20, l=10, b=10, t=10))
+                                            aspectmode='cube'), width=2000, margin=dict(r=20, l=10, b=10, t=10))
         else:
             figure.add_trace(go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k, opacity=0.6, color='#DC143C',
                                        flatshading=True))
@@ -333,7 +333,7 @@ class Container:
         self._update_height_map(box)
 
     def plot(self, figure: Type[go.Figure] = None) -> Type[go.Figure]:
-        """Adds the plot of a container to a given figure
+        """Adds the plot of a container with its boxes to a given figure
 
         Parameters
         ----------
@@ -366,7 +366,7 @@ class Container:
         camera = dict(eye=dict(x=2, y=2, z=0.1))
 
         # Update figure properties for improved visualization
-        figure.update_layout(showlegend=False, scene_camera=camera)
+        figure.update_layout(showlegend=False, scene_camera=camera, width=2000, height=2000)
         return figure
 
     def plot_vd(self):
@@ -380,7 +380,6 @@ class Container:
 
         ct = vd.Box(size=size_ct)
         plt1 = vd.show(ct)
-
         plt1.render()
 
         #    vd.show(box_list, N=len(boxes), azimuth=.2, size=(2100, 1300),
