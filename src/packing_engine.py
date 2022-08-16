@@ -27,7 +27,8 @@ from itertools import product
 from src.utils import generate_vertices, boxes_generator
 import plotly.graph_objects as go
 import vedo as vd
-from vedo.colors import colors
+import plotly.express as px
+# from vedo.colors import colors
 
 
 class Box:
@@ -99,7 +100,7 @@ class Box:
         return f"Box id: {self.id_}: Size: {self.len_edges[0]} x {self.len_edges[1]} x {self.len_edges[2]}," \
                f"Position: ({self.position[0]}, {self.position[1]}, {self.position[2]})"
 
-    def plot(self, figure: Type[go.Figure] = None) -> Type[go.Figure]:
+    def plot(self, color, figure: Type[go.Figure] = None) -> Type[go.Figure]:
         """ Adds the plot of a box to a given figure
 
              Parameters
@@ -122,14 +123,14 @@ class Box:
 
         if figure is None:
             figure = go.Figure(data=[go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k,
-                                               opacity=0.6, color='#DC143C',
+                                               opacity=0.6, color=color,
                                                flatshading=True)])
             figure.update_layout(scene=dict(xaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(x) + 1]),
                                             yaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(y) + 1]),
                                             zaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(z) + 1]),
-                                            aspectmode='cube'), width=2000, margin=dict(r=20, l=10, b=10, t=10))
+                                            aspectmode='cube'), width=1200, margin=dict(r=20, l=10, b=10, t=10))
         else:
-            figure.add_trace(go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k, opacity=0.6, color='#DC143C',
+            figure.add_trace(go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k, opacity=0.6, color=color,
                                        flatshading=True))
         return figure
 
@@ -359,14 +360,17 @@ class Container:
             figure.add_trace(
                 go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=2)))
 
+        color_list = px.colors.qualitative.Plotly
+
         for item in self.boxes:
-            figure = item.plot(figure)
+            item_color = color_list[item.volume % len(color_list)]
+            figure = item.plot(item_color, figure)
 
         # Choose the visualization angle
         camera = dict(eye=dict(x=2, y=2, z=0.1))
 
         # Update figure properties for improved visualization
-        figure.update_layout(showlegend=False, scene_camera=camera, width=2000, height=2000)
+        figure.update_layout(showlegend=False, scene_camera=camera, width=1200, height=1200)
         return figure
 
     def plot_vd(self):
@@ -446,7 +450,6 @@ if __name__ == "__main__":
     container = Container([12, 12, 12])
     # The parameter 'check_area' gives the percentage of the bottom area of the box that must be supported
     container.first_fit_decreasing(boxes, check_area=100)
-    container.plot_vd()
+    fig = container.plot()
+    fig.show()
 
-    #fig = container.plot()
-    #fig.show()
