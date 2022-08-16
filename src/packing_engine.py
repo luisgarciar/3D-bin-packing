@@ -26,6 +26,8 @@ from nptyping import NDArray, Int, Shape
 from itertools import product
 from src.utils import generate_vertices, boxes_generator
 import plotly.graph_objects as go
+import vedo as vd
+from vedo.colors import colors
 
 
 class Box:
@@ -92,6 +94,10 @@ class Box:
         """Returns a list with the vertices of the box"""
         vert = generate_vertices(self.len_edges, self.position)
         return list(vert)
+
+    def __repr__(self):
+        return f"Box id: {self.id_}: Size: {self.len_edges[0]} x {self.len_edges[1]} x {self.len_edges[2]}," \
+               f"Position: ({self.position[0]}, {self.position[1]}, {self.position[2]})"
 
     def plot(self, figure: Type[go.Figure] = None) -> Type[go.Figure]:
         """ Adds the plot of a box to a given figure
@@ -192,6 +198,10 @@ class Container:
         # Add the height of the new box in the x-y coordinates occupied by the box
         self.height_map[box.position[0]: box.position[0] + box.len_edges[0],
                         box.position[1]: box.position[1] + box.len_edges[1]] += box.len_edges[2]
+
+    def __repr__(self):
+        return f"Container id: {self.id_}: Size: {self.len_edges[0]} x {self.len_edges[1]} x {self.len_edges[2]}," \
+               f"Position: ({self.position[0]}, {self.position[1]}, {self.position[2]})"
 
     def get_height_map(self):
         """ Returns a copy of the height map of the container"""
@@ -359,6 +369,36 @@ class Container:
         figure.update_layout(showlegend=False, scene_camera=camera)
         return figure
 
+    def plot_vd(self):
+        """Plots the container with the boxes using the vedo library"""
+        # vd.settings.immediateRendering = False  # faster for multi-renderers
+        size_ct = [0, 10, 0, 10, 0, 10]
+
+        # [self.position[0], self.position[0] + self.len_edges[0],
+        # self.position[1], self.position[1] + self.len_edges[1],
+        # self.position[2], self.position[2] + self.len_edges[2]]#
+
+        ct = vd.Box(size=size_ct)
+        plt1 = vd.show(ct)
+
+        plt1.render()
+
+        #    vd.show(box_list, N=len(boxes), azimuth=.2, size=(2100, 1300),
+        #               title="Packed Boxes", interactive=1)
+        #vd.Plotter(backend=None)
+        #plt1.render()  # because of immediateRendering=False
+        #
+        # for box in self.boxes:
+        #     box_size = [box.position[0], box.position[0] + box.len_edges[0],
+        #                 box.position[1], box.position[1] + box.len_edges[1],
+        #                  box.position[2], box.position[2] + box.len_edges[2]]
+        #
+        #     box_list.append(vd.Box(size=box_size).color())
+        #
+        # plt1 = vd.show(box_list, N=len(boxes), azimuth=.2, size=(2100, 1300),
+        #                title="Packed Boxes", interactive=1)
+
+
     def first_fit_decreasing(self, boxes: List[Type[Box]], check_area: int = 100) -> None:
         """ Places all boxes in the container in the first fit decreasing order
         Parameters
@@ -407,5 +447,7 @@ if __name__ == "__main__":
     container = Container([12, 12, 12])
     # The parameter 'check_area' gives the percentage of the bottom area of the box that must be supported
     container.first_fit_decreasing(boxes, check_area=100)
-    fig = container.plot()
-    fig.show()
+    container.plot_vd()
+
+    #fig = container.plot()
+    #fig.show()
