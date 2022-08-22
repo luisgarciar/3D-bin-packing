@@ -88,36 +88,33 @@ class PackingEnv0(gym.Env):
         assert num_incoming_boxes <= len(box_sizes)
         self.container = Container(container_size)
         # The list of all boxes that should be placed in the container.
-        self.boxes = [Box(box_size, position=[-1, -1, -1], id_=index) for index, box_size in enumerate(box_sizes)]
+        self.unpacked_boxes = [Box(box_size, position=[-1, -1, -1], id_=index) for index, box_size in enumerate(box_sizes)]
         # The number and list of boxes that are visible to the agent.
         self.num_incoming_boxes = num_incoming_boxes
         self.incoming_boxes = []
         self.state = {}
         self.done = False
+        self._seed(seed)
         #self.reward = 0 -- not needed
 
         # Array to define the MultiDiscrete space with the list of sizes of the incoming boxes
         box_repr = np.zeros(shape=(num_incoming_boxes, 3), dtype=np.int32)
         box_repr[:] = self.container.size
+        # Array to define the MultiDiscrete space with the height map of the container
         height_map_repr = np.ones(shape=(container_size[0], container_size[1]), dtype=np.int32)*container_size[2]
 
         # Dict to define the observation space
         observation_dict = {'height_map': MultiDiscrete(height_map_repr),
                             'incoming_box_sizes': MultiDiscrete(box_repr)}
 
-        #if gen_action_mask is True:
-            #observation_dict['action_mask'] = MultiBinary([self.container.size[0], self.container.size[1]])
-
+        # if gen_action_mask is True:
+        # observation_dict['action_mask'] = MultiBinary([self.container.size[0], self.container.size[1]])
         self.observation_space = gym.spaces.Dict(observation_dict)
 
         # Dict to define the action space
         action_dict = {'box_index': Discrete(num_incoming_boxes),
-                       'position': MultiDiscrete([self.container.size[0],
-                                                  self.container.size[1]])}
+                       'position': MultiDiscrete([self.container.size[0], self.container.size[1]])}
         self.action_space = gym.spaces.Dict(action_dict)
-
-        # reset the environment and seed to guarantee the sequence of pseudo-random numbers
-        self.reset(seed)
 
     def _seed(self, seed: int = 42) -> None:
         """Seed the environment.
@@ -134,20 +131,20 @@ class PackingEnv0(gym.Env):
         ----------
             observation: Dictionary with the observation of the environment.
         """
-        #Check: add info, return info
+        # Check: add info, return info
         self._seed(seed)
         self.container.reset()
         # Reset the list of incoming boxes visible to the agent and deletes them from the list of boxes to be packed
-        self.incoming_boxes = self.boxes[:self.num_incoming_boxes]
-        del self.boxes[:self.num_incoming_boxes]  # check if this makes sense
-        incoming_box_sizes = [self.incoming_boxes[i].size for i in range(self.num_incoming_boxes)]
+        self.incoming_boxes = self.unpacked_boxes[0:self.num_incoming_boxes]
+        self.unpacked_boxes[:self.num_incoming_boxes] = []
+        # Set the list of incoming box sizes in the observation space
+        incoming_box_sizes = np.asarray([box.size for box in self.incoming_boxes])
         # Reset the state of the environment
         self.state = {'height_map': self.container.height_map, 'incoming_box_sizes': incoming_box_sizes}
         self.done = False
-
         return self.state
 
-    def step(self, action: dict) -> Tuple[NDArray, float, bool, dict]:
+    def step(self, action: dict) -> Tuple[NDArray, float, bool, bool, dict]:
         """ Step the environment.
         Parameters:
         -----------
@@ -156,7 +153,9 @@ class PackingEnv0(gym.Env):
         ----------
             observation: Dictionary with the observation of the environment.
             reward: Reward for the action.
-            done: Whether the episode is done.
+            truncated: Whether the episode is truncated.
+            terminated: Whether the episode is terminated.
+            info: Dictionary with additional information.
         """
         # Get the index of the box to be placed in the container
         box_index = action['box_index']
@@ -164,38 +163,29 @@ class PackingEnv0(gym.Env):
         position = action['position']
         # Check if the action is valid
         # TO DO: add parameter check area, add info, return info
-        if self.container.check_valid_box_placement(self.incoming_boxes[box_index], position, check_area = 100) == 1:
+        if self.container.check_valid_box_placement(self.incoming_boxes[box_index], position, check_area=100) == 1:
             # Place the box in the container
             self.container.place_box(self.incoming_boxes[box_index], position)
+            self.state['height_map'] = self.container.height_map
             # Remove the box from the list of incoming boxes
             del self.incoming_boxes[box_index]
+            # Add a new box to the list of incoming boxes if possible
+            if len(self.unpacked_boxes) > 0:
+                self.incoming_boxes.append(self.unpacked_boxes.pop())
+                incoming_box_sizes = np.asarray([box.size for box in self.incoming_boxes])
             # Update the state of the environment
-            self.state['height_map'] = self.container.height_map
-            self.state['incoming_box_sizes'] = np.delete(self.state['incoming_box_sizes'], box_index, axis=0)
-            # Check if the episode is done
+            self.state['incoming_box_sizes'] = incoming_box_sizes
+            # Check if the episode is terminated
             self.done = (len(self.incoming_boxes) == 0)
             terminated = self.done
+            truncated = False
             # Give a reward for the action
             # self.reward = self.container.compute_reward()
             reward = 1
             # Return the observation, reward, done and info
-            return self.state, reward, terminated, {}
+            return self.state, reward, truncated, terminated, {}
 
-    # self.container.place_box(self.incoming_boxes[box_index], position)
-    # # Remove the box from the list of incoming boxes
-    # del self.incoming_boxes[box_index]
-    #
-    # # Update the state of the environment
-    # self.state['height_map'] = self.container.height_map
-    # # Remove the incoming box from the list of incoming boxes
-    # # If there are no more incoming boxes, the episode is done
-    # if len(self.incoming_boxes) == 0:
-    #     self.done = True
-    # # Return the observation, reward, done and info
-    # reward = self.compute_step_reward()
-    # return self.state, reward, self.done
-
-    def compute_step_reward(self) -> float:
+    def compute_reward(self) -> float:
         """ Compute the reward for the action.
         Returns:
         ----------
