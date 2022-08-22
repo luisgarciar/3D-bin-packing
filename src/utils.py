@@ -37,19 +37,29 @@ def boxes_generator(len_bin_edges: List[int], num_items: int = 64, seed: int = 4
         box_edges = [np.prod(box) for box in items]
         index = rd.choices(list(range(len(items))), weights=box_edges)[0]
         box0 = items.pop(index)
+
         # choose an axis (x or y for 2D or x,y,z for 3D) randomly by item edge length
         axis = rd.choices(list(range(dim)), weights=box0)[0]
         len_edge = box0[axis]
+        while len_edge == 1:
+            axis = rd.choices(list(range(dim)), weights=box0)[0]
+            len_edge = box0[axis]
 
-        # choose a position randomly on the axis by the distance to the center of edge
-        if len_edge == 1:
-            items.append(box0)
-            continue
-        elif len_edge == 2:
+        # choose a splitting point along this axis
+        if len_edge == 2:
             split_point = 1
         else:
             dist_edge_center = [abs(x - len_edge / 2) for x in range(1, len_edge)]
             split_point = rd.choices(list(range(1, len_edge)), weights=dist_edge_center)[0]
+
+        # # choose a position randomly on the axis by the distance to the center of edge
+        # if len_edge == 1:
+        #     items.append(box0)
+        #     continue
+        # elif len_edge == 2:
+        #     split_point = 1
+        # else:
+        #
 
         # split box0 into box1 and box2 on the split_point on the chosen axis
         box1 = deepcopy(box0)
