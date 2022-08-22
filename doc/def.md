@@ -1,7 +1,7 @@
 # Definition of the State and Action Spaces and the Reward Function
 
 We assume that our environment has a container of size `len_edges = (lx,ly,lz)` where each entry is the 
-lengths of the container in the corresponding coordinate axis. For simplicity, we only consider the case of 
+length of the container in the corresponding coordinate axis. For simplicity, we only consider the case of 
 a container that is loaded from the top. 
 
 In addition, we assume that only a number `num_incoming_boxes` of boxes is visible to the agent, 
