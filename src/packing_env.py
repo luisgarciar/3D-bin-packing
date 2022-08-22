@@ -85,9 +85,10 @@ class PackingEnv0(gym.Env):
             box_size: sizes of boxes to be placed in the container
         """
         # TO DO: Add parameter check box area
+        assert num_incoming_boxes <= len(box_sizes)
         self.container = Container(container_size)
         # The list of all boxes that should be placed in the container.
-        self.boxes = [Box(box_size) for box_size in box_sizes]
+        self.boxes = [Box(box_size, position=[-1, -1, -1], id_=index) for index, box_size in enumerate(box_sizes)]
         # The number and list of boxes that are visible to the agent.
         self.num_incoming_boxes = num_incoming_boxes
         self.incoming_boxes = []
@@ -98,18 +99,19 @@ class PackingEnv0(gym.Env):
         # Array to define the MultiDiscrete space with the list of sizes of the incoming boxes
         box_repr = np.zeros(shape=(num_incoming_boxes, 3), dtype=np.int32)
         box_repr[:] = self.container.size
+        height_map_repr = np.ones(shape=(container_size[0], container_size[1]), dtype=np.int32)*container_size[2]
 
         # Dict to define the observation space
-        observation_dict = {'height_map': MultiDiscrete([self.container.size[0], self.container.size[1]]),
+        observation_dict = {'height_map': MultiDiscrete(height_map_repr),
                             'incoming_box_sizes': MultiDiscrete(box_repr)}
 
-        if gen_action_mask is True:
-            observation_dict['action_mask'] = MultiBinary([self.container.size[0], self.container.size[1]])
+        #if gen_action_mask is True:
+            #observation_dict['action_mask'] = MultiBinary([self.container.size[0], self.container.size[1]])
 
         self.observation_space = gym.spaces.Dict(observation_dict)
 
         # Dict to define the action space
-        action_dict = {'box_index': Discrete(num_incoming_boxes, dtype=np.int32),
+        action_dict = {'box_index': Discrete(num_incoming_boxes),
                        'position': MultiDiscrete([self.container.size[0],
                                                   self.container.size[1]])}
         self.action_space = gym.spaces.Dict(action_dict)

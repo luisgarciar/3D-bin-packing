@@ -12,7 +12,7 @@ We follow the space representation depicted below, all coordinates and lengths o
        |________Y
       /
      /
-    Xn
+    X
 
     Classes:
         Box
@@ -21,9 +21,8 @@ We follow the space representation depicted below, all coordinates and lengths o
 """
 import numpy as np
 from copy import deepcopy
-from typing import List, Type, Any
+from typing import List, Type
 from nptyping import NDArray, Int, Shape
-from itertools import product
 from src.utils import generate_vertices, boxes_generator
 import plotly.graph_objects as go
 import vedo as vd
@@ -40,36 +39,36 @@ class Box:
             id of the box
       position: int
             Coordinates of the position of the bottom-leftmost-deepest corner of the box
-      len_edges: int
+      size: int
             Lengths of the edges of the box
      """
 
-    def __init__(self, len_edges: List[int], position: List[int], id_: int) -> None:
+    def __init__(self, size: List[int], position: List[int], id_: int) -> None:
         """ Initializes a box object
 
         Parameters
         ----------
-        id_: int
-            id of the box
+        size: List[int]
+            Lengths of the edges of the box in the order (x, y, z) = (depth, length, height)
         position: List[int]
             Coordinates of the position of the bottom-leftmost-deepest corner of the box
-        len_edges: List[int]
-            Lengths of the edges of the box
+        id_: int
+            id of the box
 
         Returns
         -------
         Box object
         """
-        assert len(len_edges) == len(position), "Sizes of len_edges and position do not match"
-        assert len(len_edges) == 3, "Size of len_edges is different from 3"
+        assert len(size) == len(position), "Lengths of box size and position do not match"
+        assert len(size) == 3, "Box size must be a list of 3 integers"
 
-        assert (len_edges[0] > 0 and len_edges[1] > 0 and len_edges[2] > 0) , "Length of edges must be positive"
+        assert (size[0] > 0 and size[1] > 0 and size[2] > 0) , "Lengths of edges must be positive"
         assert (position[0] == -1 and position[1] == -1 and position[2] == -1) \
                or (position[0] >= 0 and position[1] >= 0 and position[2] >= 0), "Position is not valid"
 
         self.id_ = id_
         self.position = np.asarray(position)
-        self.len_edges = np.asarray(len_edges)
+        self.size = np.asarray(size)
 
     def rotate(self, rotation: int) -> None:
         """Rotates the box in place
@@ -83,21 +82,21 @@ class Box:
     @property
     def area_bottom(self) -> int:
         """ Area of the bottom face of the box """
-        return self.len_edges[0] * self.len_edges[1]
+        return self.size[0] * self.size[1]
 
     @property
     def volume(self) -> int:
         """ Area of the bottom face of the box """
-        return self.len_edges[0] * self.len_edges[1]*self.len_edges[2]
+        return self.size[0] * self.size[1]*self.size[2]
 
     @property
     def vertices(self) -> List[np.ndarray]:
         """Returns a list with the vertices of the box"""
-        vert = generate_vertices(self.len_edges, self.position)
+        vert = generate_vertices(self.size, self.position)
         return list(vert)
 
     def __repr__(self):
-        return f"Box id: {self.id_}: Size: {self.len_edges[0]} x {self.len_edges[1]} x {self.len_edges[2]}," \
+        return f"Box id: {self.id_}, Size: {self.size[0]} x {self.size[1]} x {self.size[2]}, " \
                f"Position: ({self.position[0]}, {self.position[1]}, {self.position[2]})"
 
     def plot(self, color, figure: Type[go.Figure] = None) -> Type[go.Figure]:
@@ -113,7 +112,7 @@ class Box:
              go.Figure
              """
         # Generate the coordinates of the vertices
-        vertices = generate_vertices(self.len_edges, self.position).T
+        vertices = generate_vertices(self.size, self.position).T
         x, y, z = vertices[0, :], vertices[1, :], vertices[2, :]
         # The arrays i, j, k contain the indices of the triangles to be plotted (two per each face of the box)
         # The triangles have vertices (x[i[index]], y[j[index]], z[k[index]]), index = 0,1,..7.
@@ -142,17 +141,17 @@ class Container:
     ----------
     id_: int
         id of the container
-    len_edges: NDArray[Shape["1,3"],Int]
+    size: NDArray[Shape["1,3"],Int]
         Lengths of the edges of the container
     position: NDArray[Shape["1,3"],Int]
         Coordinates of the bottom-leftmost-deepest corner of the container
     boxes: List[Type[Box]]
         List with the boxes placed inside the container
     height_map: NDArray[Shape["*,*"],Int]
-        An array of size (len_edges[0],len_edges[1]) representing the height map (top view) of the container
+        An array of size (size[0],size[1]) representing the height map (top view) of the container
     """
 
-    def __init__(self, len_edges: List[int], position=None, id_: int = 0) -> None:
+    def __init__(self, size: List[int], position=None, id_: int = 0) -> None:
         """Initializes a 3D container
 
         Parameters
@@ -161,33 +160,33 @@ class Container:
             id of the container (default = 0)
         positions: int, optional
             Coordinates of the bottom-leftmost-deepest corner of the container (default = 0,0,0)
-        len_edges: int
+        size: int
             Lengths of the edges of the container
         """
 
         if position is None:
             position = np.zeros(shape=3, dtype=np.int32)
 
-        assert len(len_edges) == len(position), "Sizes of len_edges and position do not match"
-        assert len(len_edges) == 3, "Size of len_edges is different from 3"
+        assert len(size) == len(position), "Sizes of size and position do not match"
+        assert len(size) == 3, "Size of size is different from 3"
         position = np.asarray(position)
         np.testing.assert_equal(position[2], 0), "Position is not valid"
 
         self.id_ = id_
         self.position = np.asarray(position, dtype=np.int32)
-        self.len_edges = np.asarray(len_edges, dtype=np.int32)
+        self.size = np.asarray(size, dtype=np.int32)
         self.boxes = []
-        self.height_map = np.zeros(shape=(len_edges[0], len_edges[1]), dtype=np.int32)
+        self.height_map = np.zeros(shape=(size[0], size[1]), dtype=np.int32)
 
     @property
     def vertices(self):
         """Returns a list with the vertices of the container"""
-        return generate_vertices(self.len_edges, self.position)
+        return generate_vertices(self.size, self.position)
 
     def reset(self):
         """Resets the container to an empty state"""
         self.boxes = []
-        self.height_map = np.zeros(shape=[self.len_edges[0],self.len_edges[1]], dtype=np.int32)
+        self.height_map = np.zeros(shape=[self.size[0],self.size[1]], dtype=np.int32)
 
     def _update_height_map(self, box):
         """Updates the height map after placing a box
@@ -197,11 +196,11 @@ class Container:
              Box to be placed inside the container
         """
         # Add the height of the new box in the x-y coordinates occupied by the box
-        self.height_map[box.position[0]: box.position[0] + box.len_edges[0],
-                        box.position[1]: box.position[1] + box.len_edges[1]] += box.len_edges[2]
+        self.height_map[box.position[0]: box.position[0] + box.size[0],
+                        box.position[1]: box.position[1] + box.size[1]] += box.size[2]
 
     def __repr__(self):
-        return f"Container id: {self.id_}: Size: {self.len_edges[0]} x {self.len_edges[1]} x {self.len_edges[2]}," \
+        return f"Container id: {self.id_}, Size: {self.size[0]} x {self.size[1]} x {self.size[2]}, " \
                f"Position: ({self.position[0]}, {self.position[1]}, {self.position[2]})"
 
     def get_height_map(self):
@@ -227,7 +226,7 @@ class Container:
         assert len(new_pos) == 2
 
         # Generate the vertices of the bottom face of the box
-        v = generate_vertices(box.len_edges, [*new_pos, 1])
+        v = generate_vertices(box.size, [*new_pos, 1])
         # bottom vertices of the box
         v0, v1, v2, v3 = v[0, :], v[1, :], v[2, :],  v[3, :]
         # Generate the vertices of the bottom face of the container
@@ -250,7 +249,7 @@ class Container:
         # lev is the level (height) at which the bottom corners of the box will be located
         lev = corners_levs[0]
         # bottom_face_lev contains the levels of all the points in the bottom face
-        bottom_face_lev = self.height_map[v0[0]:v0[0] + box.len_edges[0], v0[1]:v0[1] + box.len_edges[1]]
+        bottom_face_lev = self.height_map[v0[0]:v0[0] + box.size[0], v0[1]:v0[1] + box.size[1]]
 
         # Check that the level of the corners is the maximum of all points in the bottom face
         if np.array_equal(lev, np.amax(bottom_face_lev)) is False:
@@ -259,7 +258,7 @@ class Container:
         # Count how many of the points in the bottom face are supported at height equal to lev
         count_level = np.count_nonzero(bottom_face_lev == lev)
         # Check the percentage of box bottom area that is supported (at the height equal to lev)
-        support_perc = int((count_level / (box.len_edges[0]*box.len_edges[1]))*100)
+        support_perc = int((count_level / (box.size[0]*box.size[1]))*100)
         if support_perc < check_area:
             return 0
 
@@ -268,20 +267,20 @@ class Container:
 
         # Check that the box fits in the container in the new location
         fit_x_axis = [np.greater_equal(dummy_box.position[0], self.position[0]),
-                      np.less_equal(dummy_box.position[0] + dummy_box.len_edges[0],
-                                    self.position[0] + self.len_edges[0])]
+                      np.less_equal(dummy_box.position[0] + dummy_box.size[0],
+                                    self.position[0] + self.size[0])]
 
         condition_x = np.all(fit_x_axis)
 
         fit_y_axis = [np.greater_equal(dummy_box.position[1], self.position[1]),
-                      np.less_equal(dummy_box.position[1] + dummy_box.len_edges[1],
-                                   self.position[1] + self.len_edges[1])]
+                      np.less_equal(dummy_box.position[1] + dummy_box.size[1],
+                                   self.position[1] + self.size[1])]
 
         condition_y = np.all(fit_y_axis)
 
         fit_z_axis = [np.greater_equal(dummy_box.position[2], self.position[2]),
-                      np.less_equal(dummy_box.position[2] + dummy_box.len_edges[2],
-                                    self.position[2] + self.len_edges[2])]
+                      np.less_equal(dummy_box.position[2] + dummy_box.size[2],
+                                    self.position[2] + self.size[2])]
 
         if (not condition_x) or (not condition_y) or (not fit_z_axis):
             return 0
@@ -304,10 +303,10 @@ class Container:
                np.array(np.int32)
                """
 
-        action_mask = np.zeros(shape=[self.len_edges[0], self.len_edges[1]], dtype=np.int32)
+        action_mask = np.zeros(shape=[self.size[0], self.size[1]], dtype=np.int32)
         # Generate all possible positions for the box in the container
-        for i in range(0, self.len_edges[0]):
-            for j in range(0, self.len_edges[1]):
+        for i in range(0, self.size[0]):
+            for j in range(0, self.size[1]):
                 if self.check_valid_box_placement(box, [i, j], check_area) == 1:
                     action_mask[i,j] = 1
         return action_mask
@@ -348,7 +347,7 @@ class Container:
             figure = go.Figure()
 
         # Generate all vertices and edge pairs, the numbering is explained in the function generate_vertices
-        vertices = generate_vertices(self.len_edges, self.position).T
+        vertices = generate_vertices(self.size, self.position).T
         x, y, z = vertices[0, :], vertices[1, :], vertices[2, :]
         edge_pairs = [(0, 1), (0, 2), (0, 4), (1, 3), (1, 5), (2, 3), (2, 6), (3, 7), (4, 5), (4, 6), (5, 7), (6, 7)]
 
@@ -373,37 +372,36 @@ class Container:
         figure.update_layout(showlegend=False, scene_camera=camera, width=1200, height=1200)
         return figure
 
-    def plot_vd(self):
-        """Plots the container with the boxes using the vedo library"""
-        # vd.settings.immediateRendering = False  # faster for multi-renderers
-        size_ct = [0, 10, 0, 10, 0, 10]
+    def plot_vd(self) -> None:
+        """Plots the container with the boxes using the vedo visualization library"""
+        vd.settings.immediateRendering = True  # faster for multi-renderers
+        # convert container size to vedo format
+        size_ct = [self.position[0], self.position[0] + self.size[0],
+                   self.position[1], self.position[1] + self.size[1],
+                   self.position[2], self.position[2] + self.size[2]]
 
-        # [self.position[0], self.position[0] + self.len_edges[0],
-        # self.position[1], self.position[1] + self.len_edges[1],
-        # self.position[2], self.position[2] + self.len_edges[2]]#
+        # create container to be plotted
+        ct = vd.Box(size=size_ct, c="blue", alpha=0.5).wireframe()
+        vd.show(ct).render()
+        #plt1.render()
 
-        ct = vd.Box(size=size_ct)
-        plt1 = vd.show(ct)
-        plt1.render()
+        box_list = []
 
-        #    vd.show(box_list, N=len(boxes), azimuth=.2, size=(2100, 1300),
-        #               title="Packed Boxes", interactive=1)
-        #vd.Plotter(backend=None)
-        #plt1.render()  # because of immediateRendering=False
-        #
-        # for box in self.boxes:
-        #     box_size = [box.position[0], box.position[0] + box.len_edges[0],
-        #                 box.position[1], box.position[1] + box.len_edges[1],
-        #                  box.position[2], box.position[2] + box.len_edges[2]]
-        #
-        #     box_list.append(vd.Box(size=box_size).color())
-        #
-        # plt1 = vd.show(box_list, N=len(boxes), azimuth=.2, size=(2100, 1300),
-        #                title="Packed Boxes", interactive=1)
+        # create boxes to be plotted
+        for box in self.boxes:
+            box_size = [box.position[0], box.position[0] + box.size[0],
+                        box.position[1], box.position[1] + box.size[1],
+                        box.position[2], box.position[2] + box.size[2]]
 
+            box_list.append(vd.Box(size=box_size))
+
+        box_list
+        plt1 = vd.show(box_list, N=len(boxes), azimuth=.2, size=(2100, 1300),
+                       title="Packed Boxes", interactive=1)
+        #plt1.render()
 
     def first_fit_decreasing(self, boxes: List[Type[Box]], check_area: int = 100) -> None:
-        """ Places all boxes in the container in the first fit decreasing order
+        """ Places all boxes in the container using the first fit decreasing heuristic method
         Parameters
         ----------
         boxes: List[Box]
@@ -420,8 +418,8 @@ class Container:
 
             # top lev is the maximum level where the box can be placed
             # according to its height
-            top_lev = self.len_edges[2] - box.len_edges[2]
-            # max_occupied is the maximum height occupied by a box
+            top_lev = self.size[2] - box.size[2]
+            # max_occupied is the maximum height occupied by a box in the container
             max_occupied = np.max(self.height_map)
             lev = min(top_lev,  max_occupied)
 
@@ -429,7 +427,7 @@ class Container:
             # the top level and going down
             k = lev
             while k >= 0:
-                locations = np.zeros(shape=(self.len_edges[0], self.len_edges[1]), dtype=np.int32)
+                locations = np.zeros(shape=(self.size[0], self.size[1]), dtype=np.int32)
                 kth_level = np.logical_and(self.height_map == k,  action_mask == 1)
                 if kth_level.any():
                     locations[kth_level] = 1
@@ -450,6 +448,8 @@ if __name__ == "__main__":
     container = Container([12, 12, 12])
     # The parameter 'check_area' gives the percentage of the bottom area of the box that must be supported
     container.first_fit_decreasing(boxes, check_area=100)
+    # show plot
     fig = container.plot()
     fig.show()
+    #container.plot_vd()
 
