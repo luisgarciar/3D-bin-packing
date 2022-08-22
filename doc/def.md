@@ -13,9 +13,9 @@ We use a dictionary state `observation_space` with keys `height_map` and `incomi
 the environment. 
 
 The two-dimensional array contained in the key `height_map` has shape `(lx,ly)` and represents the top view of the 
-container, where `height_map[i,j]` is the maximum height of a box occupying any point of the form $(i,j,k)$ in the container,
-or $0$ if no box occupies this point. The height map is an object of type `spaces.MultiDiscrete` with shape `(2,1)` and
-containing integers in the range `[0,lx), [0,ly]`.
+container, where `height_map[i,j]` is the maximum height of a box occupying any point of the form $(i,j,k)$ 
+in the container, or $0$ if no box occupies this point. The height map is an object of type `spaces.MultiDiscrete` 
+with shape `(lx,ly)` and containing integers in the range `[0,z)`.
 
 The array contained in the `incoming_box_sizes` key is an object of type `spaces.MultiDiscrete` with shape 
 `(num_incoming_boxes,3)` and contains the sizes of the boxes to be packed.
