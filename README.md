@@ -10,7 +10,7 @@ This repository contains an environment compatible with [OpenAI Gym's API](https
 ## Problem definition and assumptions:
 The environment consists of a list of 3D boxes of varying sizes and a single container of fixed size. The goal is to pack
 as many boxes as possible in the container minimizing the empty volume. We assume that rotation of the boxes is 
-not possible. 
+not possible.
 
 ##  Problem instances: 
 The function `boxes_generator` in the file `utils.py` generates instances of the 3D Bin Packing problem using the 
@@ -19,14 +19,14 @@ algorithm described in [Ranked Reward: Enabling Self-Play Reinforcement Learning
 
 ## Documentation
 The documentation for this project is located in the `doc` folder, with a complete description of the state and 
-action space as well as the rewards to be used for RL.
+action space as well as the rewards to be used for RL training.
 
 ## Packing engine
 The module `packing_engine` (located in `src/packing_engine.py`) implements the `Container` and `Box` objects that are 
 used in the Gym environment. To add custom features (for example, to allow rotations), see the documentation of this module.
 
 ## Environment
-The gym environment is implemented in the module `src/packing_env.py`.
+The Gym environment is implemented in the module `src/packing_env.py`.
 
 ## Demo notebooks
 A demo notebook `demo_ffd` implementing the heuristic-based method 'First Fit Decreasing' is available in the `nb` 
@@ -34,3 +34,10 @@ folder.
 
 ## Unit tests
 The folder `tests` contains unit tests to be run with pytest.
+
+## Update: 22/08/2022
+The following updates have been made to the repository:
+- Added the `packing_env.py` file with the Gym environment.
+- Added unit tests for the Gym environment.
+- Updated the documentation with the full description of the state and action space.
+- Updated the demo notebooks.

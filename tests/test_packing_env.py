@@ -54,5 +54,3 @@ def test_step(basic_environment):
     assert len(env.unpacked_boxes) == 1
     assert len(env.container.boxes) == 1
     assert reward == 1
-
-
