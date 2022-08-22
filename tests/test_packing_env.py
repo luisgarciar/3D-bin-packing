@@ -25,6 +25,5 @@ def test_env_initialization_random_data(container_size, box_sizes, num_incoming_
     assert env.observation_space.spaces['incoming_box_sizes'].shape == (num_incoming_boxes, 3)
     assert_array_equal(env.action_space['position'].nvec, np.array([container_size[0],  container_size[1]]))
     assert env.action_space.spaces['position'].shape == (2,)
-    #assert env.action_space.spaces['action_mask'].shape == (2, 1)
 
 
