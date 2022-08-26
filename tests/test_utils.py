@@ -5,7 +5,7 @@ import random as rd
 
 # Data for random tests
 rd.seed(42)
-num_rd_tests = 20
+num_rd_tests = 5
 num_items = rd.sample(range(50, 81), num_rd_tests)
 height = rd.sample(range(10, 10 + num_rd_tests + 1), num_rd_tests)
 length = rd.sample(range(20, 20 + num_rd_tests + 1), num_rd_tests)

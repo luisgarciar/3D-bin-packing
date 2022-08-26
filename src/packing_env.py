@@ -171,19 +171,25 @@ class PackingEnv0(gym.Env):
             del self.incoming_boxes[box_index]
             # Add a new box to the list of incoming boxes if possible
             if len(self.unpacked_boxes) > 0:
-                self.incoming_boxes.append(self.unpacked_boxes.pop())
+                self.incoming_boxes.append(self.unpacked_boxes.pop(0))
                 incoming_box_sizes = np.asarray([box.size for box in self.incoming_boxes])
-            # Update the state of the environment
-            self.state['incoming_box_sizes'] = incoming_box_sizes
-            # Check if the episode is terminated
-            self.done = (len(self.incoming_boxes) == 0)
-            terminated = self.done
-            truncated = False
-            # Give a reward for the action
-            # self.reward = self.container.compute_reward()
-            reward = 1
-            # Return the observation, reward, done and info
-            return self.state, reward, truncated, terminated, {}
+            if len(self.incoming_boxes) == 0:
+                self.done = True
+                terminated = self.done
+                reward = 1
+                self.state['incoming_box_sizes'] = []
+                # TO DO: add info, return info
+                return self.state, reward, False, terminated, {}
+            else:
+                # Update the state of the environment
+                self.state['incoming_box_sizes'] = incoming_box_sizes
+                terminated = False
+                truncated = False
+                # Give a reward for the action
+                # self.reward = self.container.compute_reward()
+                reward = 1
+                # Return the observation, reward, done and info
+                return self.state, reward, truncated, terminated, {}
 
     def compute_reward(self) -> float:
         """ Compute the reward for the action.
@@ -205,6 +211,4 @@ class PackingEnv0(gym.Env):
         """ Close the environment.
         """
         pass
-
-    
 
