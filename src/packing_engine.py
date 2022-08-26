@@ -23,11 +23,10 @@ import numpy as np
 from copy import deepcopy
 from typing import List, Type
 from nptyping import NDArray, Int, Shape
-from src.utils import generate_vertices, boxes_generator
+from src.utils import generate_vertices, boxes_generator, cuboids_intersection
 import plotly.graph_objects as go
 import vedo as vd
 import plotly.express as px
-# from vedo.colors import colors
 
 
 class Box:
@@ -285,6 +284,21 @@ class Container:
         if (not condition_x) or (not condition_y) or (not fit_z_axis):
             return 0
 
+        # check that the box does not overlap with other boxes
+        cuboid_a = [dummy_box.position[0], dummy_box.position[1], dummy_box.position[2],
+                    dummy_box.position[0] + dummy_box.size[0],
+                    dummy_box.position[1] + dummy_box.size[1],
+                    dummy_box.position[2] + dummy_box.size[2]]
+
+        for other_box in self.boxes:
+            cuboid_b = [other_box.position[0], other_box.position[1], other_box.position[2],
+                        other_box.position[0] + other_box.size[0],
+                        other_box.position[1] + other_box.size[1],
+                        other_box.position[2] + other_box.size[2]]
+            if cuboids_intersection(cuboid_a, cuboid_b) is True:
+                return 0
+
+        # if all conditions are met, the position is valid
         return 1
 
     def all_possible_positions(self, box: Type[Box], check_area: int = 100) -> NDArray[Shape["*, *"], Int]:
@@ -308,7 +322,7 @@ class Container:
         for i in range(0, self.size[0]):
             for j in range(0, self.size[1]):
                 if self.check_valid_box_placement(box, [i, j], check_area) == 1:
-                    action_mask[i,j] = 1
+                    action_mask[i, j] = 1
         return action_mask
 
     def place_box(self, box: Type[Box], new_position: List[int], check_area = 100) -> None:

@@ -12,7 +12,7 @@ length = rd.sample(range(20, 20 + num_rd_tests + 1), num_rd_tests)
 width = rd.sample(range(30, 30 + num_rd_tests + 1), num_rd_tests)
 
 edge_lengths = [[height[j], length[j], width[j]] for j in range(num_rd_tests)]
-testdata = [(num_items[j], edge_lengths[j], int(np.prod(edge_lengths[j]))) for j in range(num_rd_tests)]
+testdata0 = [(num_items[j], edge_lengths[j], int(np.prod(edge_lengths[j]))) for j in range(num_rd_tests)]
 
 
 def test_box_generator_default():
@@ -21,8 +21,39 @@ def test_box_generator_default():
     assert int(np.sum(box_sizes)) == 1000
 
 
-@pytest.mark.parametrize("num_items,bin_size,expected", testdata)
+@pytest.mark.parametrize("num_items,bin_size,expected", testdata0)
 def test_box_generator_random_data(num_items, bin_size, expected):
     items = utils.boxes_generator(bin_size, num_items)
     box_sizes = [np.prod(box) for box in items]
     assert int(np.sum(box_sizes)) == expected
+
+
+interval_a = [[0, 2], [3, 4], [5, 6], [1, 5]]
+interval_b = [[1, 2], [2, 3], [5, 6], [0, 1]]
+intersect = [True, False, True, False]
+testdata1 = zip(interval_a, interval_b, intersect)
+
+
+@pytest.mark.parametrize("a,b,expected", testdata1)
+def test_interval_intersection(a, b, expected):
+    assert utils.interval_intersection(a, b) \
+           == utils.interval_intersection(b, a) \
+           == expected
+
+
+cuboid_a = [[0, 1, 3, 4, 5, 6], [0, 2, 1, 3, 5, 4], [0, 0, 0, 1, 1, 1]]
+cuboid_b = [[1, 2, 3, 4, 5, 6], [0, 1, 2, 5, 3, 4], [2, 2, 2, 3, 3, 3]]
+inter = [True, True, False]
+testdata2 = zip(cuboid_a, cuboid_b, inter)
+
+
+@pytest.mark.parametrize("cuboid_a,cuboid_b,expected", testdata2)
+def test_cuboid_intersection(cuboid_a, cuboid_b, expected):
+    assert utils.cuboids_intersection(cuboid_a, cuboid_b) == \
+           utils.cuboids_intersection(cuboid_b, cuboid_a) ==\
+           expected
+
+
+
+
+

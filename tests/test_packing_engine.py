@@ -3,21 +3,22 @@ import numpy as np
 from src.packing_engine import Box, Container
 import random as rd
 # from src.utils import boxes_generator
+import faulthandler
 
+faulthandler.enable()
 rd.seed(42)
 num_rd_tests = 5
 num_items = rd.sample(range(50, 81), num_rd_tests)
-height = rd.sample(range(1, 1 + num_rd_tests + 1), num_rd_tests)
-length = rd.sample(range(2, 2 + num_rd_tests + 1), num_rd_tests)
-width = rd.sample(range(3, 3 + num_rd_tests + 1), num_rd_tests)
-pos_x = rd.sample(range(0, num_rd_tests + 1), num_rd_tests)
-pos_y = rd.sample(range(0, num_rd_tests + 1), num_rd_tests)
-pos_z = rd.sample(range(0, num_rd_tests + 1), num_rd_tests)*0
+height = rd.sample(range(1, 1 + num_rd_tests + 2), num_rd_tests)
+length = rd.sample(range(2, 2 + num_rd_tests + 2), num_rd_tests)
+width = rd.sample(range(3, 3 + num_rd_tests + 2), num_rd_tests)
+pos_x = rd.sample(range(0, num_rd_tests + 2), num_rd_tests)
+pos_y = rd.sample(range(0, num_rd_tests + 2), num_rd_tests)
+pos_z = rd.sample(range(0, num_rd_tests + 2), num_rd_tests)*0
 
 sizes = zip(height, length, width)
 positions = zip(pos_x, pos_y, pos_z)
 test_data1 = zip(sizes, positions)
-test_data2 = zip(sizes, positions)
 
 
 # # Test of initialization of Container class
