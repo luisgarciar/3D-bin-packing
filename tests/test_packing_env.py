@@ -136,16 +136,3 @@ def test_step(basic_environment):
     assert reward == 1
     assert truncated is False
     assert terminated is True
-
-
-
-
-
-
-
-
-
-
-
-
-

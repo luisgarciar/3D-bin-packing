@@ -52,8 +52,3 @@ def test_cuboid_intersection(cuboid_a, cuboid_b, expected):
     assert utils.cuboids_intersection(cuboid_a, cuboid_b) == \
            utils.cuboids_intersection(cuboid_b, cuboid_a) ==\
            expected
-
-
-
-
-

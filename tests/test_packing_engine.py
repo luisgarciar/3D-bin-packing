@@ -3,9 +3,7 @@ import numpy as np
 from src.packing_engine import Box, Container
 import random as rd
 # from src.utils import boxes_generator
-import faulthandler
 
-faulthandler.enable()
 rd.seed(42)
 num_rd_tests = 5
 num_items = rd.sample(range(50, 81), num_rd_tests)
