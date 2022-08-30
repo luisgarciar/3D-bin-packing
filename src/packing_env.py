@@ -25,6 +25,7 @@ import numpy as np
 from typing import List, Type, Tuple
 from nptyping import NDArray, Int, Shape
 from src.packing_engine import Box, Container
+from gym.utils import seeding
 
 
 class PackingEnv0(gym.Env):
@@ -73,76 +74,114 @@ class PackingEnv0(gym.Env):
         To be defined
     """
 
-    metadata = {"render.modes": ["human", "rgb_array"]}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, container_size: List[int], box_sizes: List[List[int]], num_incoming_boxes: int = 1,
-                 seed: int = 42, gen_action_mask: bool = True) -> None:
+    def __init__(self, container_size: List[int], box_sizes: List[List[int]], num_visible_boxes: int = 1) -> None:
         """ Initialize the environment.
 
          Parameters
         ----------:
             container_size: container_size
             box_size: sizes of boxes to be placed in the container
+            num_visible_boxes: number of boxes visible to the agent
         """
         # TO DO: Add parameter check box area
-        assert num_incoming_boxes <= len(box_sizes)
+        assert num_visible_boxes <= len(box_sizes)
         self.container = Container(container_size)
-        # The list of all boxes that should be placed in the container.
-        self.unpacked_boxes = [Box(box_size, position=[-1, -1, -1], id_=index) for index, box_size in enumerate(box_sizes)]
+        # The initial list of all boxes that should be placed in the container.
+        self.initial_boxes = [Box(box_size, position=[-1, -1, -1], id_=index) for index, box_size in enumerate(box_sizes)]
+
+        # The list of boxes that are not yet packed and not visible to the agent
+        self.unpacked_hidden_boxes = self.initial_boxes.copy()
+        # The list of boxes that are not yet packed and are visible to the agent
+        self.unpacked_visible_boxes = []
+        # The list of boxes that are already packed
+        self.packed_boxes = []
+        # The list of boxes that could not be packed (didn't fit in the container)
+        self.skipped_boxes = []
+
         # The number and list of boxes that are visible to the agent.
-        self.num_incoming_boxes = num_incoming_boxes
-        self.incoming_boxes = []
+        self.num_visible_boxes = num_visible_boxes
+        self.unpacked_visible_boxes = []
         self.state = {}
         self.done = False
-        self._seed(seed)
-        #self.reward = 0 -- not needed
+        # self.reward = 0 -- not needed
 
-        # Array to define the MultiDiscrete space with the list of sizes of the incoming boxes
-        box_repr = np.zeros(shape=(num_incoming_boxes, 3), dtype=np.int32)
-        box_repr[:] = self.container.size
+        # Array to define the MultiDiscrete space with the list of sizes of the visible boxes
+        # Note: The upper bound for the entries in MultiDiscrete space is not inclusive -- so we add 1
+        box_repr = np.zeros(shape=(num_visible_boxes, 3), dtype=np.int32)
+        box_repr[:] = self.container.size + [1, 1, 1]
         # Array to define the MultiDiscrete space with the height map of the container
-        height_map_repr = np.ones(shape=(container_size[0], container_size[1]), dtype=np.int32)*container_size[2]
+        height_map_repr = np.ones(shape=(container_size[0], container_size[1]), dtype=np.int32)*(container_size[2] + 1)
+
+        # Array to define the MultiDiscrete space with the action mask
+        action_mask_repr = np.ones(shape=(container_size[0], container_size[1]), dtype=np.int8)*2
 
         # Dict to define the observation space
         observation_dict = {'height_map': MultiDiscrete(height_map_repr),
-                            'incoming_box_sizes': MultiDiscrete(box_repr)}
+                            'visible_box_sizes': MultiDiscrete(box_repr),
+                            'action_mask': MultiDiscrete(action_mask_repr)}
 
-        # if gen_action_mask is True:
-        # observation_dict['action_mask'] = MultiBinary([self.container.size[0], self.container.size[1]])
+        # Observation space
         self.observation_space = gym.spaces.Dict(observation_dict)
 
-        # Dict to define the action space
-        action_dict = {'box_index': Discrete(num_incoming_boxes),
-                       'position': MultiDiscrete([self.container.size[0], self.container.size[1]])}
+        # Dict to define the action space for num_visible_boxes > 1
+        if num_visible_boxes > 1:
+            action_dict = {'box_index': Discrete(num_visible_boxes),
+                           'position': MultiDiscrete([container_size[0], container_size[1]])}
+        else:
+            action_dict = {'position': MultiDiscrete([container_size[0], container_size[1]])}
+
+        # Action space
         self.action_space = gym.spaces.Dict(action_dict)
 
-    def _seed(self, seed: int = 42) -> None:
-        """Seed the environment.
-        Parameters
-        -----------
-            seed: int
-                Seed for the environment.
-            """
-        self._np_random = gym.utils.seeding.np_random(seed)
+    def seed(self, seed: int = 42):
+        """Seed the random number generator for the environment.
+         Parameters
+         -----------
+             seed: int
+                 Seed for the environment.
+             """
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
 
-    def reset(self, seed) -> dict[str, object]:
+    def reset(self, seed=None, options={}, return_info=False) -> dict[str, object]:
         """ Reset the environment.
         Returns:
         ----------
             observation: Dictionary with the observation of the environment.
         """
         # Check: add info, return info
-        self._seed(seed)
         self.container.reset()
-        # Reset the list of incoming boxes visible to the agent and deletes them from the list of boxes to be packed
-        self.incoming_boxes = self.unpacked_boxes[0:self.num_incoming_boxes]
-        self.unpacked_boxes[:self.num_incoming_boxes] = []
-        # Set the list of incoming box sizes in the observation space
-        incoming_box_sizes = np.asarray([box.size for box in self.incoming_boxes])
+        # Reset the list of boxes that are not yet packed and not visible to the agent
+        self.unpacked_hidden_boxes = self.initial_boxes.copy()
+
+        # Reset the list of boxes visible to the agent and deletes them from the list of
+        # hidden unpacked boxes to be packed
+        if self.num_visible_boxes > 1:
+            self.unpacked_visible_boxes = self.unpacked_hidden_boxes[0:self.num_visible_boxes]
+            del self.unpacked_hidden_boxes[0:self.num_visible_boxes]
+        else:
+            self.unpacked_visible_boxes = [self.unpacked_hidden_boxes.pop(0)]
+
+        # Reset the list of boxes that are already packed
+        self.packed_boxes = self.container.boxes
+
+        # Set the list of visible box sizes in the observation space
+        visible_box_sizes = np.asarray([box.size for box in self.unpacked_visible_boxes])
+        visible_box_sizes = np.reshape(visible_box_sizes, (self.num_visible_boxes, 3))
         # Reset the state of the environment
-        self.state = {'height_map': self.container.height_map, 'incoming_box_sizes': incoming_box_sizes}
+        hm = np.asarray(self.container.height_map, dtype=np.int32)
+
+        self.state = {'height_map': hm, 'visible_box_sizes': visible_box_sizes,
+                      'action_mask': self.container.action_mask(box=self.unpacked_visible_boxes[0])}
         self.done = False
-        return self.state
+        self.seed(seed)
+
+        if return_info is False:
+            return self.state
+        else:
+            return self.state, {}
 
     def step(self, action: dict) -> Tuple[NDArray, float, bool, bool, dict]:
         """ Step the environment.
@@ -158,38 +197,56 @@ class PackingEnv0(gym.Env):
             info: Dictionary with additional information.
         """
         # Get the index of the box to be placed in the container
-        box_index = action['box_index']
+        if self.num_visible_boxes > 1:
+            box_index = action['box_index']
+        else:
+            box_index = 0
         # Get the position of the box to be placed in the container
         position = action['position']
         # Check if the action is valid
         # TO DO: add parameter check area, add info, return info
-        if self.container.check_valid_box_placement(self.incoming_boxes[box_index], position, check_area=100) == 1:
-            # Place the box in the container
-            self.container.place_box(self.incoming_boxes[box_index], position)
-            self.state['height_map'] = self.container.height_map
-            # Remove the box from the list of incoming boxes
-            del self.incoming_boxes[box_index]
-            # Add a new box to the list of incoming boxes if possible
-            if len(self.unpacked_boxes) > 0:
-                self.incoming_boxes.append(self.unpacked_boxes.pop(0))
-                incoming_box_sizes = np.asarray([box.size for box in self.incoming_boxes])
-            if len(self.incoming_boxes) == 0:
-                self.done = True
-                terminated = self.done
-                reward = 1
-                self.state['incoming_box_sizes'] = []
-                # TO DO: add info, return info
-                return self.state, reward, False, terminated, {}
+        if self.container.check_valid_box_placement(self.unpacked_visible_boxes[box_index], position, check_area=100) == 1:
+            # Place the box in the container and delete it from the list of unpacked boxes that are visible to the agent
+            if self.num_visible_boxes > 1:
+                self.container.place_box(self.unpacked_visible_boxes.pop(box_index), position)
             else:
-                # Update the state of the environment
-                self.state['incoming_box_sizes'] = incoming_box_sizes
-                terminated = False
-                truncated = False
-                # Give a reward for the action
-                # self.reward = self.container.compute_reward()
-                reward = 1
-                # Return the observation, reward, done and info
-                return self.state, reward, truncated, terminated, {}
+                self.container.place_box(self.unpacked_visible_boxes[0], position)
+                self.unpacked_visible_boxes = []
+            # Update the list of packed boxes
+            self.state['height_map'] = self.container.height_map
+            # Update the list of packed boxes
+            self.packed_boxes = self.container.boxes
+            # set reward
+            reward = 1
+            # self.reward = self.container.compute_reward()
+
+        # If the action is not valid, remove the box and add it to skipped boxes
+        else:
+            self.skipped_boxes.append(self.unpacked_visible_boxes.pop(box_index))
+            reward = 0
+
+        # Update the list of visible boxes if possible
+        if len(self.unpacked_hidden_boxes) > 0:
+            self.unpacked_visible_boxes.append(self.unpacked_hidden_boxes.pop(0))
+
+        # If there are no more boxes to be packed, finish the episode
+        if len(self.unpacked_visible_boxes) == 0:
+            self.done = True
+            terminated = self.done
+            truncated = False
+            self.state['visible_box_sizes'] = []
+            # TO DO: add info, return info
+        else:
+            visible_box_sizes = np.asarray([box.size for box in self.unpacked_visible_boxes])
+            visible_box_sizes = np.reshape(visible_box_sizes, (self.num_visible_boxes, 3))
+            # Update the state of the environment
+            self.state['visible_box_sizes'] = visible_box_sizes
+            # Update the action mask
+            self.state['action_mask'] = self.container.action_mask(box=self.unpacked_visible_boxes[0])
+            terminated = False
+            truncated = False
+
+        return self.state, reward, truncated, terminated, {}
 
     def compute_reward(self) -> float:
         """ Compute the reward for the action.
@@ -211,4 +268,3 @@ class PackingEnv0(gym.Env):
         """ Close the environment.
         """
         pass
-

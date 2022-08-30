@@ -173,7 +173,8 @@ def test_pack_boxes():
     container.place_box(box4, [0, 5])
     np.testing.assert_array_equal(container.boxes[4].position, np.asarray([0, 5, 0]))
 
-# Test of method Container.all_possible_positions with a sequence of boxes
+
+# Test of method Container.action_mask with a sequence of boxes
 def test_all_possible_positions():
     container = Container([10, 10, 10])
 
@@ -182,7 +183,7 @@ def test_all_possible_positions():
     box0_action_mask = np.zeros(shape=[10, 10], dtype=np.int32)
     box0_action_mask[0:8, 0:8] = 1
     # check all possible positions for box0
-    np.testing.assert_array_equal(container.all_possible_positions(box0, 100), box0_action_mask)
+    np.testing.assert_array_equal(container.action_mask(box0, 100), box0_action_mask)
     # place box0 at [0,0]
     container.place_box(box0, [0, 0])
     # check height map after placing box0
@@ -200,7 +201,7 @@ def test_all_possible_positions():
     box1_action_mask[9, :] = 0
     box1_action_mask[:, 9] = 0
     # check all possible positions for box1
-    np.testing.assert_array_equal(container.all_possible_positions(box1, 100), box1_action_mask)
+    np.testing.assert_array_equal(container.action_mask(box1, 100), box1_action_mask)
     # place box1 at [0,0]
     container.place_box(box1, [0, 0])
     # check height map after placing box1
@@ -215,7 +216,7 @@ def test_all_possible_positions():
     box2_action_mask[0:8, 0:7] = 1
     box2_action_mask[0:3, 0:3] = 0
     # check all possible positions for box2
-    np.testing.assert_array_equal(container.all_possible_positions(box2, 100), box2_action_mask)
+    np.testing.assert_array_equal(container.action_mask(box2, 100), box2_action_mask)
     # place box2 at [3,0]
     container.place_box(box2, [3, 0])
     # check height map after placing box2
@@ -234,7 +235,7 @@ def test_all_possible_positions():
     box3_action_mask[0, 3] = 1
     box3_action_mask[3, 0:3] = 1
     # check all possible positions for box3
-    np.testing.assert_array_equal(container.all_possible_positions(box3, 100), box3_action_mask)
+    np.testing.assert_array_equal(container.action_mask(box3, 100), box3_action_mask)
     # place box3 at [0,3]
     container.place_box(box3, [0, 3])
     # check height map after placing box3
@@ -255,7 +256,7 @@ def test_all_possible_positions():
     box4_action_mask[3, 0:3] = 1
     box4_action_mask[0:3, 4] = 0
     # check all possible positions for box4
-    np.testing.assert_array_equal(container.all_possible_positions(box4, 100), box4_action_mask)
+    np.testing.assert_array_equal(container.action_mask(box4, 100), box4_action_mask)
     # place box4 at [0,5]
     container.place_box(box4, [0, 5])
     # check height map after placing box4

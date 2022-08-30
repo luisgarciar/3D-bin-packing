@@ -119,17 +119,32 @@ class Box:
         j = [0, 3, 4, 7, 0, 5, 2, 7, 3, 5, 2, 4]
         k = [2, 1, 6, 5, 4, 1, 6, 3, 7, 1, 6, 0]
 
+        edge_pairs = [(0, 1), (0, 2), (0, 4), (1, 3), (1, 5), (2, 3), (2, 6), (3, 7), (4, 5), (4, 6), (5, 7), (6, 7)]
+        for (m, n) in edge_pairs:
+            vert_x = np.array([x[m], x[n]])
+            vert_y = np.array([y[m], y[n]])
+            vert_z = np.array([z[m], z[n]])
+
         if figure is None:
+            # Plot the box faces
             figure = go.Figure(data=[go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k,
-                                               opacity=0.6, color=color,
+                                               opacity=1, color=color,
                                                flatshading=True)])
+            # Plot the box edges
+            figure.add_trace(
+                go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=4)))
+
             figure.update_layout(scene=dict(xaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(x) + 1]),
                                             yaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(y) + 1]),
                                             zaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(z) + 1]),
                                             aspectmode='cube'), width=1200, margin=dict(r=20, l=10, b=10, t=10))
         else:
-            figure.add_trace(go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k, opacity=0.6, color=color,
+            # Plot the box faces
+            figure.add_trace(go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k, opacity=1, color=color,
                                        flatshading=True))
+            # Plot the box edges
+            figure.add_trace(go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=4)))
+
         return figure
 
 
@@ -147,7 +162,9 @@ class Container:
     boxes: List[Type[Box]]
         List with the boxes placed inside the container
     height_map: NDArray[Shape["*,*"],Int]
-        An array of size (size[0],size[1]) representing the height map (top view) of the container
+        An array of size (size[0],size[1]) representing the height map (top view) of the container,
+        where height_map[i,j] is the current height of stacked items at position (i,j).
+
     """
 
     def __init__(self, size: List[int], position=None, id_: int = 0) -> None:
@@ -185,7 +202,7 @@ class Container:
     def reset(self):
         """Resets the container to an empty state"""
         self.boxes = []
-        self.height_map = np.zeros(shape=[self.size[0],self.size[1]], dtype=np.int32)
+        self.height_map = np.zeros(shape=[self.size[0], self.size[1]], dtype=np.int32)
 
     def _update_height_map(self, box):
         """Updates the height map after placing a box
@@ -301,7 +318,7 @@ class Container:
         # if all conditions are met, the position is valid
         return 1
 
-    def all_possible_positions(self, box: Type[Box], check_area: int = 100) -> NDArray[Shape["*, *"], Int]:
+    def action_mask(self, box: Type[Box], check_area: int = 100) -> NDArray[Shape["*, *"], Int]:
         """ Returns an array with all possible positions for a box in the container
             array[i,j] = 1 if the box can be placed in position (i,j), 0 otherwise
 
@@ -314,16 +331,16 @@ class Container:
 
                Returns
                -------
-               np.array(np.int32)
+               np.array(np.int8)
                """
 
-        action_mask = np.zeros(shape=[self.size[0], self.size[1]], dtype=np.int32)
+        action_mask = np.zeros(shape=[self.size[0], self.size[1]], dtype=np.int8)
         # Generate all possible positions for the box in the container
         for i in range(0, self.size[0]):
             for j in range(0, self.size[1]):
                 if self.check_valid_box_placement(box, [i, j], check_area) == 1:
                     action_mask[i, j] = 1
-        return action_mask
+        return tuple([tuple(e) for e in action_mask])
 
     def place_box(self, box: Type[Box], new_position: List[int], check_area = 100) -> None:
         """ Places a box in the container
@@ -366,16 +383,17 @@ class Container:
         edge_pairs = [(0, 1), (0, 2), (0, 4), (1, 3), (1, 5), (2, 3), (2, 6), (3, 7), (4, 5), (4, 6), (5, 7), (6, 7)]
 
         # Add a line between each pair of edges to the figure
-        for (i, j) in edge_pairs:
-            vert_x = np.array([x[i], x[j]])
-            vert_y = np.array([y[i], y[j]])
-            vert_z = np.array([z[i], z[j]])
+        for (m, n) in edge_pairs:
+            vert_x = np.array([x[m], x[n]])
+            vert_y = np.array([y[m], y[n]])
+            vert_z = np.array([z[m], z[n]])
             figure.add_trace(
-                go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=2)))
+                go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=3)))
 
-        color_list = px.colors.qualitative.Plotly
+        color_list = px.colors.qualitative.Dark24
 
         for item in self.boxes:
+            # item_color = color_list[-2]
             item_color = color_list[item.volume % len(color_list)]
             figure = item.plot(item_color, figure)
 
@@ -428,7 +446,7 @@ class Container:
 
         for box in boxes:
             # Find the positions where the box can be placed
-            action_mask = self.all_possible_positions(box, check_area)
+            action_mask = self.action_mask(box, check_area)
 
             # top lev is the maximum level where the box can be placed
             # according to its height
@@ -465,5 +483,5 @@ if __name__ == "__main__":
     # show plot
     fig = container.plot()
     fig.show()
-    #container.plot_vd()
+
 

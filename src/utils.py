@@ -8,14 +8,14 @@ import numpy as np
 from copy import deepcopy
 
 
-def boxes_generator(len_bin_edges: List[int], num_items: int = 64, seed: int = 42) -> List[List[int]]:
+def boxes_generator(bin_size: List[int], num_items: int = 64, seed: int = 42) -> List[List[int]]:
     """Generates instances of the 2D and 3D bin packing problems
 
     Parameters
     ----------
     num_items: int, optional
         Number of boxes to be generated (default = 64)
-    len_bin_edges: List[int], optional (default=[10,10,10])
+    bin_size: List[int], optional (default=[10,10,10])
         List of length 2 or 3 with the dimensions of the container (default = (10,10,10))
     seed: int, optional
         seed for the random number generator (default = 42)
@@ -26,22 +26,22 @@ def boxes_generator(len_bin_edges: List[int], num_items: int = 64, seed: int = 4
     A list of length num_items with the dimensions of the randomly generated boxes.
     """
     rd.seed(seed)
-    dim = len(len_bin_edges)
+    dim = len(bin_size)
     # initialize the items list
-    items = [len_bin_edges]
+    item_sizes = [bin_size]
 
-    while len(items) < num_items:
-        # choose an item randomly by its size
-        box_edges = [np.prod(box) for box in items]
-        index = rd.choices(list(range(len(items))), weights=box_edges)[0]
-        box0 = items.pop(index)
+    while len(item_sizes) < num_items:
+        # choose an item randomly by its volume
+        box_vols = [np.prod(box_size) for box_size in item_sizes]
+        index = rd.choices(list(range(len(item_sizes))), weights=box_vols)[0]
+        box0_size = item_sizes.pop(index)
 
         # choose an axis (x or y for 2D or x,y,z for 3D) randomly by item edge length
-        axis = rd.choices(list(range(dim)), weights=box0)[0]
-        len_edge = box0[axis]
+        axis = rd.choices(list(range(dim)), weights=box0_size)[0]
+        len_edge = box0_size[axis]
         while len_edge == 1:
-            axis = rd.choices(list(range(dim)), weights=box0)[0]
-            len_edge = box0[axis]
+            axis = rd.choices(list(range(dim)), weights=box0_size)[0]
+            len_edge = box0_size[axis]
 
         # choose a splitting point along this axis
         if len_edge == 2:
@@ -51,14 +51,14 @@ def boxes_generator(len_bin_edges: List[int], num_items: int = 64, seed: int = 4
             split_point = rd.choices(list(range(1, len_edge)), weights=dist_edge_center)[0]
 
         # split box0 into box1 and box2 on the split_point on the chosen axis
-        box1 = deepcopy(box0)
-        box2 = deepcopy(box0)
+        box1 = deepcopy(box0_size)
+        box2 = deepcopy(box0_size)
         box1[axis] = split_point
         box2[axis] = len_edge - split_point
-        assert (np.prod(box1) + np.prod(box2)) == np.prod(box0)
-        items.extend([box1, box2])
+        assert (np.prod(box1) + np.prod(box2)) == np.prod(box0_size)
+        item_sizes.extend([box1, box2])
 
-    return items
+    return item_sizes
 
 
 def generate_vertices(cuboid_len_edges, cuboid_position) -> NDArray[Shape["3, 8"], Int]:
