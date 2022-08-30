@@ -7,6 +7,8 @@ import random as rd
 from numpy.testing import assert_array_equal
 from gym import make
 from gym.utils.env_checker import check_env
+import time
+
 
 
 num_rd_tests = 5
@@ -27,8 +29,7 @@ def test_env_initialization_random_data(container_size, box_sizes, num_visible_b
     assert len(env.unpacked_hidden_boxes) == 5
     assert env.observation_space.spaces['height_map'].shape == (container_size[0], container_size[1])
     assert env.observation_space.spaces['visible_box_sizes'].shape == (num_visible_boxes, 3)
-    assert_array_equal(env.action_space['position'].nvec, np.array([container_size[0],  container_size[1]]))
-    assert env.action_space.spaces['position'].shape == (2,)
+
 
 
 @pytest.fixture
@@ -46,7 +47,6 @@ def test_env_reset(basic_environment):
     assert len(env.unpacked_hidden_boxes) == 4
     assert env.observation_space['height_map'].shape == (10, 10)
     assert env.observation_space['visible_box_sizes'].shape == (1, 3)
-    assert env.action_space['position'].shape == (2,)
     assert_array_equal(obs['height_map'], np.zeros((10, 10)))
 
 
@@ -55,7 +55,7 @@ def test_sequence(basic_environment):
     obs = env.reset(seed=42)
     assert_array_equal(obs['visible_box_sizes'], np.array([[3, 3, 3]]))
     # action for num_visible_boxes = 1
-    action = {'position': [0, 0]}
+    action = 0
     obs, reward, truncated, terminated, info = env.step(action)
     assert obs['height_map'][0, 0] == 3
     assert len(env.unpacked_hidden_boxes) == 3
@@ -73,7 +73,7 @@ def test_sequence(basic_environment):
     # Check the size of the next incoming box (box1)
     assert_array_equal(obs['visible_box_sizes'], np.array([[3, 2, 3]]))
     # Set an action that is allowed
-    action = {'position': [0, 0]}
+    action = 0
     obs, reward, truncated, terminated, info = env.step(action)
     assert obs['height_map'][0, 0] == 6
     assert len(env.unpacked_hidden_boxes) == 2
@@ -87,7 +87,7 @@ def test_sequence(basic_environment):
     # Check the size of the next incoming box (box2)
     assert_array_equal(obs['visible_box_sizes'], np.array([[3, 4, 2]]))
     # Set an action that is allowed
-    action = {'position': [3, 0], 'box_index': 0}
+    action = 3
     obs, reward, truncated, terminated, info = env.step(action)
     # Check the height map after the action
     hm2 = np.zeros(shape=[10, 10], dtype=np.int32)
@@ -106,7 +106,7 @@ def test_sequence(basic_environment):
     # Check the size of the next incoming box (box3)
     assert_array_equal(obs['visible_box_sizes'], np.array([[3, 2, 4]]))
     # Set an action that is allowed
-    action = {'position': [0, 3], 'box_index': 0}
+    action = 30 # check that this corresponds to pos = [0,3]
     obs, reward, truncated, terminated, info = env.step(action)
     # Check the height map after the action
     hm3 = np.zeros(shape=[10, 10], dtype=np.int32)
@@ -126,7 +126,7 @@ def test_sequence(basic_environment):
     # Check the size of the next incoming box (box4)
     assert_array_equal(obs['visible_box_sizes'], np.array([[3, 2, 3]]))
     # Set an action that is allowed
-    action = {'position': [0, 5], 'box_index': 0}
+    action = 50  # check that this corresponds to pos = [0,5]
     obs, reward, truncated, terminated, info = env.step(action)
     # Check the height map after the action
     hm4 = np.zeros(shape=[10, 10], dtype=np.int32)
@@ -163,15 +163,15 @@ def test_action_mask_sampling():
                num_visible_boxes=1)
     obs = env.reset()
 
-    for step_num in range(10):
+    for step_num in range(100):
         action_mask = obs['action_mask']
-        action_mask_dict = {'position': action_mask}
-        action = env.action_space.sample(action_mask_dict)
+        action = env.action_space.sample(action_mask)
         obs, reward, done, info = env.step(action)
-        env.render()
+        env.render(mode='human')
+        time.sleep(5)
         if done:
             break
 
-
+    env.container.plot()
 
 

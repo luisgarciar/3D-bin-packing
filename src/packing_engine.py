@@ -132,7 +132,7 @@ class Box:
                                                flatshading=True)])
             # Plot the box edges
             figure.add_trace(
-                go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=4)))
+                go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='yellow', width=0)))
 
             figure.update_layout(scene=dict(xaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(x) + 1]),
                                             yaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(y) + 1]),
@@ -394,14 +394,14 @@ class Container:
 
         for item in self.boxes:
             # item_color = color_list[-2]
-            item_color = color_list[item.volume % len(color_list)]
+            item_color = color_list[(item.volume + item.id_) % len(color_list)]
             figure = item.plot(item_color, figure)
 
         # Choose the visualization angle
         camera = dict(eye=dict(x=2, y=2, z=0.1))
 
         # Update figure properties for improved visualization
-        figure.update_layout(showlegend=False, scene_camera=camera, width=1200, height=1200)
+        figure.update_layout(showlegend=False, scene_camera=camera, width=1200, height=1200, template='plotly_dark')
         return figure
 
     def plot_vd(self) -> None:
