@@ -22,7 +22,7 @@ We follow the space representation depicted below, all coordinates and lengths o
 import gym
 from gym.spaces import Discrete, MultiDiscrete, MultiBinary
 import numpy as np
-from typing import List, Type, Tuple
+from typing import List, Type, Tuple, Optional
 from nptyping import NDArray, Int, Shape
 from src.packing_engine import Box, Container
 from gym.utils import seeding
@@ -33,8 +33,8 @@ class PackingEnv0(gym.Env):
 
     Description:
         The environment consists of a 3D container and an initial list of 3D boxes, the goal
-        is to pack the boxes into the container minimizing the empty space. For simplicity
-        we assume that the container is loaded from the top.
+        is to pack the boxes into the container minimizing the empty space. We assume
+        that the container is loaded from the top.
 
         The state of the container is represented by a 2D array storing the height map (top view)
         of the container (see the documentation of packing_engine.Container.height_map
@@ -72,9 +72,10 @@ class PackingEnv0(gym.Env):
         To be defined
     """
 
-    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 10}
 
-    def __init__(self, container_size: List[int], box_sizes: List[List[int]], num_visible_boxes: int = 1) -> None:
+    def __init__(self, container_size: List[int], box_sizes: List[List[int]], num_visible_boxes: int = 1,
+                 render_mode: str = 'human') -> None:
         """ Initialize the environment.
 
          Parameters
@@ -83,6 +84,9 @@ class PackingEnv0(gym.Env):
             box_sizes: sizes of boxes to be placed in the container
             num_visible_boxes: number of boxes visible to the agent
         """
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
+
         # TO DO: Add parameter check box area
         assert num_visible_boxes <= len(box_sizes)
         self.container = Container(container_size)
@@ -113,9 +117,8 @@ class PackingEnv0(gym.Env):
         height_map_repr = np.ones(shape=(container_size[0], container_size[1]), dtype=np.int32)*(container_size[2] + 1)
 
         # Array to define the MultiDiscrete space with the action mask
-        #action_mask_repr = np.ones(shape=(container_size[0], container_size[1]), dtype=np.int8)*2
-
-        #The action mask is a 1D binary array with the same length as the number of positions in the container
+        # action_mask_repr = np.ones(shape=(container_size[0], container_size[1]), dtype=np.int8)*2
+        # The action mask is a 1D binary array with the same length as the number of positions in the container
 
         # Dict to define the observation space
         observation_dict = {'height_map': MultiDiscrete(height_map_repr),
@@ -150,7 +153,7 @@ class PackingEnv0(gym.Env):
         """Converts an index to a position in the container.
         Parameters
         ----------
-            index: int
+            action: int
                 Index to be converted.
         Returns
         -------
@@ -161,12 +164,19 @@ class PackingEnv0(gym.Env):
 
         return position.astype(np.int32)
 
-
     def reset(self, seed=None, options={}, return_info=False) -> dict[str, object]:
         """ Reset the environment.
-        Returns:
+        Parameters
         ----------
-            observation: Dictionary with the observation of the environment.
+            seed: int
+                Seed for the environment.
+            options: dict
+                Options for the environment.
+            return_info: bool
+                If True, return additional information about the environment.
+        Returns
+        ----------
+            dict: Dictionary with the observation of the environment.
         """
         # Check: add info, return info
         self.container.reset()

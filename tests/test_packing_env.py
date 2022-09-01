@@ -10,7 +10,6 @@ from gym.utils.env_checker import check_env
 import time
 
 
-
 num_rd_tests = 5
 num_items = rd.sample(range(50, 81), num_rd_tests)
 height = rd.sample(range(1, 1 + num_rd_tests + 1), num_rd_tests)
@@ -29,7 +28,6 @@ def test_env_initialization_random_data(container_size, box_sizes, num_visible_b
     assert len(env.unpacked_hidden_boxes) == 5
     assert env.observation_space.spaces['height_map'].shape == (container_size[0], container_size[1])
     assert env.observation_space.spaces['visible_box_sizes'].shape == (num_visible_boxes, 3)
-
 
 
 @pytest.fixture

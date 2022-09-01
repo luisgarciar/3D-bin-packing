@@ -132,18 +132,21 @@ class Box:
                                                flatshading=True)])
             # Plot the box edges
             figure.add_trace(
-                go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='yellow', width=0)))
+                go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=0)))
 
-            figure.update_layout(scene=dict(xaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(x) + 1]),
-                                            yaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(y) + 1]),
-                                            zaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(z) + 1]),
-                                            aspectmode='cube'), width=1200, margin=dict(r=20, l=10, b=10, t=10))
+
         else:
             # Plot the box faces
             figure.add_trace(go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k, opacity=1, color=color,
                                        flatshading=True))
             # Plot the box edges
-            figure.add_trace(go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=4)))
+            figure.add_trace(go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=0)))
+
+        figure.update_layout(scene=dict(xaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(x) + 1]),
+                                        yaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(y) + 1]),
+                                        zaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(z) + 1]),
+                                        aspectmode='cube'), width=1200, margin=dict(r=20, l=10, b=10, t=10))
+
 
         return figure
 
@@ -350,7 +353,7 @@ class Container:
             Box to be placed
         new_position: List[int]
             Coordinates of new position
-        check_area
+        check_area:
 
         """
         assert self.check_valid_box_placement(box, new_position, check_area) == 1, "Invalid position for box"
@@ -382,13 +385,20 @@ class Container:
         x, y, z = vertices[0, :], vertices[1, :], vertices[2, :]
         edge_pairs = [(0, 1), (0, 2), (0, 4), (1, 3), (1, 5), (2, 3), (2, 6), (3, 7), (4, 5), (4, 6), (5, 7), (6, 7)]
 
+        # The arrays i, j, k contain the indices of the triangles to be plotted (two per each face of the box)
+        # The triangles have vertices (x[i[index]], y[j[index]], z[k[index]]), index = 0,1,..7.
+        i = [1, 2, 5, 6, 1, 4, 3, 6, 1, 7, 0, 6]
+        j = [0, 3, 4, 7, 0, 5, 2, 7, 3, 5, 2, 4]
+        k = [2, 1, 6, 5, 4, 1, 6, 3, 7, 1, 6, 0]
+
         # Add a line between each pair of edges to the figure
         for (m, n) in edge_pairs:
             vert_x = np.array([x[m], x[n]])
             vert_y = np.array([y[m], y[n]])
             vert_z = np.array([z[m], z[n]])
             figure.add_trace(
-                go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=3)))
+                go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='yellow', width=3)))
+
 
         color_list = px.colors.qualitative.Dark24
 
