@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from src.packing_engine import Box, Container
+from src.packing_kernel import Box, Container
 import random as rd
 # from src.utils import boxes_generator
 

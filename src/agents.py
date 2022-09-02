@@ -6,7 +6,7 @@ from gym.spaces import dict
 import numpy as np
 from typing import List, Type, Tuple, Dict
 from nptyping import NDArray, Int, Shape
-from src.packing_engine import Box, Container
+from src.packing_kernel import Box, Container
 from src.packing_env import
 
 

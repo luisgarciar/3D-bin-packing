@@ -24,7 +24,7 @@ from gym.spaces import Discrete, MultiDiscrete, MultiBinary
 import numpy as np
 from typing import List, Type, Tuple, Optional
 from nptyping import NDArray, Int, Shape
-from src.packing_engine import Box, Container
+from src.packing_kernel import Box, Container
 from src.utils import boxes_generator
 from gym.utils import seeding
 import copy
