@@ -23,7 +23,7 @@ import numpy as np
 from copy import deepcopy
 from typing import List, Type
 from nptyping import NDArray, Int, Shape
-from src.utils import generate_vertices, boxes_generator, cuboids_intersection
+from src.utils import generate_vertices, boxes_generator, cuboids_intersection, cuboid_fits
 import plotly.graph_objects as go
 import vedo as vd
 import plotly.express as px
@@ -61,7 +61,7 @@ class Box:
         assert len(size) == len(position), "Lengths of box size and position do not match"
         assert len(size) == 3, "Box size must be a list of 3 integers"
 
-        assert (size[0] > 0 and size[1] > 0 and size[2] > 0) , "Lengths of edges must be positive"
+        assert (size[0] > 0 and size[1] > 0 and size[2] > 0), "Lengths of edges must be positive"
         assert (position[0] == -1 and position[1] == -1 and position[2] == -1) \
                or (position[0] >= 0 and position[1] >= 0 and position[2] >= 0), "Position is not valid"
 
@@ -134,7 +134,6 @@ class Box:
             figure.add_trace(
                 go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=0)))
 
-
         else:
             # Plot the box faces
             figure.add_trace(go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k, opacity=1, color=color,
@@ -142,11 +141,10 @@ class Box:
             # Plot the box edges
             figure.add_trace(go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=0)))
 
-        figure.update_layout(scene=dict(xaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(x) + 1]),
-                                        yaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(y) + 1]),
-                                        zaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(z) + 1]),
-                                        aspectmode='cube'), width=1200, margin=dict(r=20, l=10, b=10, t=10))
-
+        # figure.update_layout(scene=dict(xaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(x) + 1]),
+        #                                yaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(y) + 1]),
+        #                                zaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(z) + 1]),
+        #                                aspectmode='cube'), width=1200, margin=dict(r=20, l=10, b=10, t=10))
 
         return figure
 
@@ -247,20 +245,26 @@ class Container:
         # Generate the vertices of the bottom face of the box
         v = generate_vertices(box.size, [*new_pos, 1])
         # bottom vertices of the box
-        v0, v1, v2, v3 = v[0, :], v[1, :], v[2, :],  v[3, :]
-        # Generate the vertices of the bottom face of the container
-        w = self.vertices
-        # bottom vertices of the container
-        w0, w1, w2, w3 = w[0, :], w[1, :], w[2, :],  w[3, :]
+        v0, v1, v2, v3 = v[0, :], v[1, :], v[2, :], v[3, :]
 
-        # Check that all bottom vertices lie inside the container
-        condition = (v0[0] < w0[0]) or (v1[0] > w1[0]) or (v2[1] > w2[1])
-        if condition:
+        # Generate the vertices of the bottom face of the container
+        w = generate_vertices(self.size, self.position)
+        # bottom vertices of the container
+        w0, w1, w2, w3 = w[0, :], w[1, :], w[2, :], w[3, :]
+
+        # Check if the bottom vertices of the box are inside the container
+        cond_0 = np.all(np.logical_and(v0[0:2] >= w0[0:2], v0[0:2] <= w3[0:2]))
+        cond_1 = np.all(np.logical_and(v1[0:2] >= w0[0:2], v1[0:2] <= w3[0:2]))
+        cond_2 = np.all(np.logical_and(v2[0:2] >= w0[0:2], v2[0:2] <= w3[0:2]))
+        cond_3 = np.all(np.logical_and(v3[0:2] >= w0[0:2], v3[0:2] <= w3[0:2]))
+
+        # Check if the bottom vertices of the box are inside the container
+        if not np.all([cond_0, cond_1, cond_2, cond_3]):
             return 0
 
         # Check that the bottom vertices of the box in the new position are at the same level
-        corners_levs = [self.height_map[v0[0], v0[1]], self.height_map[v1[0]-1, v1[1]],
-                        self.height_map[v2[0], v2[1]-1], self.height_map[v3[0]-1, v3[1]-1]]
+        corners_levs = [self.height_map[v0[0], v0[1]], self.height_map[v1[0] - 1, v1[1]],
+                        self.height_map[v2[0], v2[1] - 1], self.height_map[v3[0] - 1, v3[1] - 1]]
 
         if corners_levs.count(corners_levs[0]) != len(corners_levs):
             return 0
@@ -285,37 +289,27 @@ class Container:
         dummy_box.position = [*new_pos, lev]
 
         # Check that the box fits in the container in the new location
-        fit_x_axis = [np.greater_equal(dummy_box.position[0], self.position[0]),
-                      np.less_equal(dummy_box.position[0] + dummy_box.size[0],
-                                    self.position[0] + self.size[0])]
+        dummy_box_min_max = [dummy_box.position[0], dummy_box.position[1],
+                       dummy_box.position[2], dummy_box.position[0] + dummy_box.size[0],
+                       dummy_box.position[1] + dummy_box.size[1], dummy_box.position[2] + dummy_box.size[2]]
 
-        condition_x = np.all(fit_x_axis)
+        container_min_max = [self.position[0], self.position[1], self.position[2],
+                             self.position[0] + self.size[0], self.position[1] + self.size[1],
+                             self.position[2] + self.size[2]]
 
-        fit_y_axis = [np.greater_equal(dummy_box.position[1], self.position[1]),
-                      np.less_equal(dummy_box.position[1] + dummy_box.size[1],
-                                   self.position[1] + self.size[1])]
-
-        condition_y = np.all(fit_y_axis)
-
-        fit_z_axis = [np.greater_equal(dummy_box.position[2], self.position[2]),
-                      np.less_equal(dummy_box.position[2] + dummy_box.size[2],
-                                    self.position[2] + self.size[2])]
-
-        if (not condition_x) or (not condition_y) or (not fit_z_axis):
+        if cuboid_fits(container_min_max, dummy_box_min_max) is False:
             return 0
 
-        # check that the box does not overlap with other boxes
-        cuboid_a = [dummy_box.position[0], dummy_box.position[1], dummy_box.position[2],
-                    dummy_box.position[0] + dummy_box.size[0],
-                    dummy_box.position[1] + dummy_box.size[1],
-                    dummy_box.position[2] + dummy_box.size[2]]
-
+        # Check that the box does not overlap with other boxes in the container
         for other_box in self.boxes:
-            cuboid_b = [other_box.position[0], other_box.position[1], other_box.position[2],
-                        other_box.position[0] + other_box.size[0],
-                        other_box.position[1] + other_box.size[1],
-                        other_box.position[2] + other_box.size[2]]
-            if cuboids_intersection(cuboid_a, cuboid_b) is True:
+            if other_box.id_ == dummy_box.id_:
+                continue
+
+            other_box_min_max = [other_box.position[0], other_box.position[1], other_box.position[2],
+                                 other_box.position[0] + other_box.size[0], other_box.position[1] + other_box.size[1],
+                                 other_box.position[2] + other_box.size[2]]
+
+            if cuboids_intersection(dummy_box_min_max, other_box_min_max):
                 return 0
 
         # if all conditions are met, the position is valid
@@ -399,7 +393,6 @@ class Container:
             figure.add_trace(
                 go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='yellow', width=3)))
 
-
         color_list = px.colors.qualitative.Dark24
 
         for item in self.boxes:
@@ -412,35 +405,19 @@ class Container:
 
         # Update figure properties for improved visualization
         figure.update_layout(showlegend=False, scene_camera=camera, width=1200, height=1200, template='plotly_dark')
+
+        max_x = self.position[0] + self.size[0]
+        max_y = self.position[1] + self.size[1]
+        max_z = self.position[2] + self.size[2]
+        figure.update_layout(scene=dict(xaxis=dict(nticks=int(max_x + 2), range=[0, max_x + 1]),
+                                        yaxis=dict(nticks=int(max_y + 2), range=[0, max_y + 1]),
+                                        zaxis=dict(nticks=int(max_z + 2), range=[0, max_z + 1]),
+                                        aspectmode='cube'), width=1200, margin=dict(r=20, l=10, b=10, t=10))
+
+        figure.update_scenes(xaxis_showgrid=False, yaxis_showgrid=False, zaxis_showgrid=False)
+        figure.update_scenes(xaxis_showticklabels=False, yaxis_showticklabels=False, zaxis_showticklabels=False)
+
         return figure
-
-    def plot_vd(self) -> None:
-        """Plots the container with the boxes using the vedo visualization library"""
-        vd.settings.immediateRendering = True  # faster for multi-renderers
-        # convert container size to vedo format
-        size_ct = [self.position[0], self.position[0] + self.size[0],
-                   self.position[1], self.position[1] + self.size[1],
-                   self.position[2], self.position[2] + self.size[2]]
-
-        # create container to be plotted
-        ct = vd.Box(size=size_ct, c="blue", alpha=0.5).wireframe()
-        vd.show(ct).render()
-        #plt1.render()
-
-        box_list = []
-
-        # create boxes to be plotted
-        for box in self.boxes:
-            box_size = [box.position[0], box.position[0] + box.size[0],
-                        box.position[1], box.position[1] + box.size[1],
-                        box.position[2], box.position[2] + box.size[2]]
-
-            box_list.append(vd.Box(size=box_size))
-
-        box_list
-        plt1 = vd.show(box_list, N=len(boxes), azimuth=.2, size=(2100, 1300),
-                       title="Packed Boxes", interactive=1)
-        #plt1.render()
 
     def first_fit_decreasing(self, boxes: List[Type[Box]], check_area: int = 100) -> None:
         """ Places all boxes in the container using the first fit decreasing heuristic method
@@ -470,7 +447,7 @@ class Container:
             k = lev
             while k >= 0:
                 locations = np.zeros(shape=(self.size[0], self.size[1]), dtype=np.int32)
-                kth_level = np.logical_and(self.height_map == k,  action_mask == 1)
+                kth_level = np.logical_and(self.height_map == k,  np.equal(action_mask, 1))
                 if kth_level.any():
                     locations[kth_level] = 1
                     # Find the first position where the box can be placed
@@ -493,5 +470,6 @@ if __name__ == "__main__":
     # show plot
     fig = container.plot()
     fig.show()
+
 
 

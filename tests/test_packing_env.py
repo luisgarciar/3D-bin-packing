@@ -48,6 +48,7 @@ def test_env_reset(basic_environment):
     assert_array_equal(obs['height_map'], np.zeros((10, 10)))
 
 
+@pytest.mark.integtest
 def test_sequence(basic_environment):
     env = basic_environment
     obs = env.reset(seed=42)
@@ -55,7 +56,10 @@ def test_sequence(basic_environment):
     # action for num_visible_boxes = 1
     action = 0
     obs, reward, truncated, terminated, info = env.step(action)
-    assert obs['height_map'][0, 0] == 3
+    # Check that the height map is correct
+    hm0 = np.zeros(shape=[10, 10], dtype=np.int32)
+    hm0[0:3, 0:3] = 3
+    np.testing.assert_array_equal(obs['height_map'], hm0)
     assert len(env.unpacked_hidden_boxes) == 3
     assert len(env.packed_boxes) == 1
     assert reward == 1
@@ -63,17 +67,21 @@ def test_sequence(basic_environment):
     assert terminated is False
     # Check that box0 is in the container in the right place
     np.testing.assert_array_equal(env.container.boxes[0].position, np.asarray([0, 0, 0]))
-    # Check that the height map is correct
     hm = np.zeros((10, 10), dtype=np.int32)
-    hm[0:3, 0:3] = 3
-    np.testing.assert_array_equal(env.container.get_height_map(), hm)
 
     # Check the size of the next incoming box (box1)
     assert_array_equal(obs['visible_box_sizes'], np.array([[3, 2, 3]]))
-    # Set an action that is allowed
+
+
+    # Set an action that is allowed for box 1
     action = 0
     obs, reward, truncated, terminated, info = env.step(action)
-    assert obs['height_map'][0, 0] == 6
+
+    # Check that the height map after placing box1 is correct
+    hm1 = np.zeros(shape=[10, 10], dtype=np.int32)
+    hm1[0:3, 0:2] = 6
+    hm1[0:3, 2] = 3
+    np.testing.assert_array_equal(obs['height_map'], hm1)
     assert len(env.unpacked_hidden_boxes) == 2
     assert len(env.container.boxes) == 2
     assert reward == 1
@@ -85,13 +93,14 @@ def test_sequence(basic_environment):
     # Check the size of the next incoming box (box2)
     assert_array_equal(obs['visible_box_sizes'], np.array([[3, 4, 2]]))
     # Set an action that is allowed
-    action = 3
+    action = 30
     obs, reward, truncated, terminated, info = env.step(action)
     # Check the height map after the action
     hm2 = np.zeros(shape=[10, 10], dtype=np.int32)
     hm2[0:3, 0:2] = 6
     hm2[0:3, 2] = 3
     hm2[3:6, 0:4] = 2
+
     np.testing.assert_array_equal(obs['height_map'], hm2)
     assert len(env.unpacked_hidden_boxes) == 1
     assert len(env.container.boxes) == 3
@@ -104,7 +113,7 @@ def test_sequence(basic_environment):
     # Check the size of the next incoming box (box3)
     assert_array_equal(obs['visible_box_sizes'], np.array([[3, 2, 4]]))
     # Set an action that is allowed
-    action = 30 # check that this corresponds to pos = [0,3]
+    action = 3
     obs, reward, truncated, terminated, info = env.step(action)
     # Check the height map after the action
     hm3 = np.zeros(shape=[10, 10], dtype=np.int32)
@@ -124,7 +133,7 @@ def test_sequence(basic_environment):
     # Check the size of the next incoming box (box4)
     assert_array_equal(obs['visible_box_sizes'], np.array([[3, 2, 3]]))
     # Set an action that is allowed
-    action = 50  # check that this corresponds to pos = [0,5]
+    action = 5
     obs, reward, truncated, terminated, info = env.step(action)
     # Check the height map after the action
     hm4 = np.zeros(shape=[10, 10], dtype=np.int32)
@@ -171,5 +180,38 @@ def test_action_mask_sampling():
             break
 
     env.container.plot()
+
+
+@pytest.fixture
+def seeded_environment():
+    container_size = [11,11,11]
+    box_sizes = [[10, 1, 2], [10, 9, 1], [4, 9, 7], [1, 9, 7], [10, 1, 7], [10, 1, 1], [10, 1, 2], [10, 8, 2],
+                 [1, 9, 7], [4, 9, 7]]
+    env = make('PackingEnv0', new_step_api=False, container_size=container_size,
+               box_sizes=box_sizes, num_visible_boxes=1, render_mode='human')
+    return env
+
+def test_randomized_agent(seeded_environment):
+    env = seeded_environment
+    obs = env.reset(seed=5)
+    initial_sizes = [[10, 1, 2], [10, 9, 1], [4, 9, 7], [1, 9, 7], [10, 1, 7], [10, 1, 1], [10, 1, 2], [10, 8, 2],
+                 [1, 9, 7], [4, 9, 7]]
+    unpacked_sizes = [box.size for box in env.unpacked_hidden_boxes]
+    assert np.array_equal(np.asarray(initial_sizes, dtype=np.int32)[1:], np.asarray(unpacked_sizes, dtype=np.int32))
+    ac_m = np.zeros((11, 11), dtype=np.int32)
+    box0 = Box(initial_sizes[0], np.asarray([-1, -1, -1]), id_=0)
+    ac_m[0, :] = 1
+    ac_m[1, :] = 1
+    ac_m = np.reshape(ac_m, (121,))
+    action_mask = obs['action_mask']
+    assert np.array_equal(box0.size, env.unpacked_visible_boxes[0].size)
+    assert np.array_equal(action_mask, ac_m)
+
+    action = env.action_space.sample(action_mask)
+    obs, reward, done, info = env.step(action)
+
+
+
+
 
 

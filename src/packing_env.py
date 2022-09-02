@@ -26,6 +26,7 @@ from typing import List, Type, Tuple, Optional
 from nptyping import NDArray, Int, Shape
 from src.packing_engine import Box, Container
 from gym.utils import seeding
+import copy
 
 
 class PackingEnv0(gym.Env):
@@ -160,7 +161,7 @@ class PackingEnv0(gym.Env):
             position: ndarray
                 Position in the container.
         """
-        position = np.array([action % self.container.size[0], action // self.container.size[0]])
+        position = np.array([action // self.container.size[0], action % self.container.size[0]])
 
         return position.astype(np.int32)
 
@@ -181,7 +182,7 @@ class PackingEnv0(gym.Env):
         # Check: add info, return info
         self.container.reset()
         # Reset the list of boxes that are not yet packed and not visible to the agent
-        self.unpacked_hidden_boxes = self.initial_boxes.copy()
+        self.unpacked_hidden_boxes = copy.deepcopy(self.initial_boxes)
 
         # Reset the list of boxes visible to the agent and deletes them from the list of
         # hidden unpacked boxes to be packed
@@ -199,7 +200,7 @@ class PackingEnv0(gym.Env):
         visible_box_sizes = np.reshape(visible_box_sizes, (self.num_visible_boxes, 3))
         # Reset the state of the environment
         hm = np.asarray(self.container.height_map, dtype=np.int32)
-        action_mask = self.container.action_mask(box=self.unpacked_visible_boxes[0])
+        action_mask = np.asarray(self.container.action_mask(box=self.unpacked_visible_boxes[0]),dtype=np.int8)
 
         self.state = {'height_map': hm, 'visible_box_sizes': visible_box_sizes,
                       'action_mask': np.reshape(action_mask, (self.container.size[0]*self.container.size[1],))}
@@ -229,6 +230,7 @@ class PackingEnv0(gym.Env):
             box_index = action['box_index']
         else:
             box_index = 0
+
         # Get the position of the box to be placed in the container
         position = self.action_to_position(action)
         # Check if the action is valid

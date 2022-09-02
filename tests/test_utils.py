@@ -52,3 +52,27 @@ def test_cuboid_intersection(cuboid_a, cuboid_b, expected):
     assert utils.cuboids_intersection(cuboid_a, cuboid_b) == \
            utils.cuboids_intersection(cuboid_b, cuboid_a) ==\
            expected
+
+
+def test_box_generator_custom():
+    items = utils.boxes_generator([10, 10, 10], num_items=10, seed=5)
+    box_sizes = [np.prod(box) for box in items]
+    assert int(np.sum(box_sizes)) == 1000
+
+
+def test_cuboid_fits_in_bin():
+    cuboid = [0, 0, 0, 1, 1, 1]
+    bin = [0, 0, 0, 10, 10, 10]
+    assert utils.cuboid_fits_in_bin(cuboid, bin)
+
+
+def test_cuboid_fits_in_bin_false():
+    cuboid = [0, 0, 0, 2, 2, 2]
+    bin = [0, 0, 0, 1, 1, 1]
+    assert not utils.cuboid_fits_in_bin(cuboid, bin)
+
+
+def test_cuboid_fits_in_bin_false2():
+    cuboid = [0, 0, 0, 1, 1, 1]
+    bin = [0, 0, 0, 2, 2, 2]
+    assert not utils.cuboid_fits_in_bin(cuboid, bin)

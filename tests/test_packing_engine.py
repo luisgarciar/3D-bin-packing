@@ -6,21 +6,20 @@ import random as rd
 
 rd.seed(42)
 num_rd_tests = 5
-num_items = rd.sample(range(50, 81), num_rd_tests)
-height = rd.sample(range(1, 1 + num_rd_tests + 2), num_rd_tests)
-length = rd.sample(range(2, 2 + num_rd_tests + 2), num_rd_tests)
-width = rd.sample(range(3, 3 + num_rd_tests + 2), num_rd_tests)
-pos_x = rd.sample(range(0, num_rd_tests + 2), num_rd_tests)
-pos_y = rd.sample(range(0, num_rd_tests + 2), num_rd_tests)
-pos_z = rd.sample(range(0, num_rd_tests + 2), num_rd_tests)*0
+num_items0 = rd.sample(range(50, 81), num_rd_tests)
+height0 = rd.sample(range(1, 1 + num_rd_tests + 2), num_rd_tests)
+length0 = rd.sample(range(2, 2 + num_rd_tests + 2), num_rd_tests)
+width0 = rd.sample(range(3, 3 + num_rd_tests + 2), num_rd_tests)
+pos_x0 = rd.sample(range(0, num_rd_tests + 2), num_rd_tests)
+pos_y0 = rd.sample(range(0, num_rd_tests + 2), num_rd_tests)
+pos_z0 = rd.sample(range(0, num_rd_tests + 2), num_rd_tests)*0
+sizes0 = zip(height0, length0, width0)
+positions0 = zip(pos_x0, pos_y0, pos_z0)
+test_data0 = zip(sizes0, positions0)
 
-sizes = zip(height, length, width)
-positions = zip(pos_x, pos_y, pos_z)
-test_data1 = zip(sizes, positions)
 
-
-# # Test of initialization of Container class
-@pytest.mark.parametrize("size, position", test_data1)
+# Test of initialization of Container class
+@pytest.mark.parametrize("size, position", test_data0)
 def test_container_initialization_random_data(size, position):
     container = Container(size, position, 0)
     assert np.array_equal(container.size, size)
@@ -29,21 +28,21 @@ def test_container_initialization_random_data(size, position):
     assert container.height_map.shape == (size[0], size[1])
 
 
-num_items = rd.sample(range(50, 81), num_rd_tests)
-height = rd.sample(range(1, 1 + num_rd_tests + 1), num_rd_tests)
-length = rd.sample(range(2, 2 + num_rd_tests + 1), num_rd_tests)
-width = rd.sample(range(3, 3 + num_rd_tests + 1), num_rd_tests)
-pos_x = rd.sample(range(0, num_rd_tests + 1), num_rd_tests)
-pos_y = rd.sample(range(0, num_rd_tests + 1), num_rd_tests)
-pos_z = rd.sample(range(0, num_rd_tests + 1), num_rd_tests)
+num_items1 = rd.sample(range(50, 81), num_rd_tests)
+height1 = rd.sample(range(1, 1 + num_rd_tests + 1), num_rd_tests)
+length1 = rd.sample(range(2, 2 + num_rd_tests + 1), num_rd_tests)
+width1 = rd.sample(range(3, 3 + num_rd_tests + 1), num_rd_tests)
+pos_x1 = rd.sample(range(0, num_rd_tests + 1), num_rd_tests)
+pos_y1 = rd.sample(range(0, num_rd_tests + 1), num_rd_tests)
+pos_z1 = rd.sample(range(0, num_rd_tests + 1), num_rd_tests)
 
-length_edges = zip(height, length, width)
-positions = zip(pos_x, pos_y, pos_z)
-test_data2 = zip(length_edges, positions)
+length_edges1 = zip(height1, length1, width1)
+positions1 = zip(pos_x1, pos_y1, pos_z1)
+test_data1 = zip(length_edges1, positions1)
 
 
 # Test of initialization of Box class
-@pytest.mark.parametrize("size, position", test_data2)
+@pytest.mark.parametrize("size, position", test_data1)
 def test_box_initialization_random_data(size, position):
     box = Box(size, position, 0)
     assert np.array_equal(box.size, size)
@@ -51,18 +50,18 @@ def test_box_initialization_random_data(size, position):
 
 
 # Test of update_height_map
-container_size = [[6, 6, 10], [6, 8, 10]]
-box_size = [[2, 2, 5], [2, 8, 3]]
-box_pos = [[3, 3, 0], [2, 0, 0]]
+container_size2 = [[6, 6, 10], [6, 8, 10]]
+box_size2 = [[2, 2, 5], [2, 8, 3]]
+box_pos2 = [[3, 3, 0], [2, 0, 0]]
 hm1 = np.array([[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 5, 5, 0],
                 [0, 0, 0, 5, 5, 0], [0, 0, 0, 0, 0, 0]], dtype=np.int32)
 hm2 = np.array([[0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [3, 3, 3, 3, 3, 3, 3, 3],
                 [3, 3, 3, 3, 3, 3, 3, 3], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.int32)
-height_map = [hm1, hm2]
-test_data3 = zip(container_size, box_size, box_pos, height_map)
+height_map2 = [hm1, hm2]
+test_data2 = zip(container_size2, box_size2, box_pos2, height_map2)
 
 
-@pytest.mark.parametrize("container_size, box_size, box_pos, height_map", test_data3)
+@pytest.mark.parametrize("container_size, box_size, box_pos, height_map", test_data2)
 def test_update_height_map(container_size, box_size, box_pos, height_map):
     container = Container(container_size)
     box = Box(box_size, box_pos, 0)
@@ -71,42 +70,42 @@ def test_update_height_map(container_size, box_size, box_pos, height_map):
 
 
 # Test of Box property area_bottom
-box_size = [[2, 2, 5], [2, 8, 3]]
-box_pos = [[3, 3, 0], [2, 0, 0]]
-area = [4, 16]
-test_data4 = zip(box_size, box_pos, area)
+box_size3 = [[2, 2, 5], [2, 8, 3]]
+box_pos3 = [[3, 3, 0], [2, 0, 0]]
+area3 = [4, 16]
+test_data3 = zip(box_size3, box_pos3, area3)
 
 
-@pytest.mark.parametrize("box_size, box_pos, area", test_data4)
+@pytest.mark.parametrize("box_size, box_pos, area", test_data3)
 def test_box_area_bottom(box_size, box_pos, area):
     box = Box(box_size, box_pos, 0)
     assert box.area_bottom == area
 
 
 # Test of Box property vertices
-box_size = [[2, 2, 5], [2, 8, 3]]
-box_pos = [[3, 3, 0], [2, 0, 0]]
-vert_1 = np.asarray([[3, 3, 0], [5, 3, 0], [3, 5, 0], [5, 5, 0], [3, 3, 5], [5, 3, 5], [3, 5, 5], [5, 5, 5]])
-vert_2 = np.asarray([[2, 0, 0], [4, 0, 0], [2, 8, 0], [4, 8, 0], [2, 0, 3], [4, 0, 3], [2, 8, 3], [4, 8, 3]])
-vertices = [vert_1, vert_2]
-test_data5 = zip(box_size, box_pos, vertices)
+box_size4 = [[2, 2, 5], [2, 8, 3]]
+box_pos4 = [[3, 3, 0], [2, 0, 0]]
+vert_14 = np.asarray([[3, 3, 0], [5, 3, 0], [3, 5, 0], [5, 5, 0], [3, 3, 5], [5, 3, 5], [3, 5, 5], [5, 5, 5]])
+vert_24 = np.asarray([[2, 0, 0], [4, 0, 0], [2, 8, 0], [4, 8, 0], [2, 0, 3], [4, 0, 3], [2, 8, 3], [4, 8, 3]])
+vertices4 = [vert_14, vert_24]
+test_data4 = zip(box_size4, box_pos4, vertices4)
 
 
-@pytest.mark.parametrize("box_size, box_pos, vertices", test_data5)
+@pytest.mark.parametrize("box_size, box_pos, vertices", test_data4)
 def test_box_vertices(box_size, box_pos, vertices):
     box = Box(box_size, box_pos, 0)
     assert np.array_equal(box.vertices, vertices)
 
 
 # Test of Container.check_valid_box_placement -- box in empty container
-container_size = [[10, 10, 10], [10, 10, 10]]
-box_size = [[2, 4, 3], [2, 4, 3]]
-box_pos = [[5, 5, 0], [2, 8, 0]]
-valid = [1, 0]
-test_data6 = zip(container_size, box_size, box_pos, valid)
+container_size5 = [[10, 10, 10], [10, 10, 10]]
+box_size5 = [[2, 4, 3], [2, 4, 3]]
+box_pos5 = [[5, 5, 0], [2, 8, 0]]
+valid5 = [1, 0]
+test_data5 = zip(container_size5, box_size5, box_pos5, valid5)
 
 
-@pytest.mark.parametrize("container_size, box_size, box_pos, valid", test_data6)
+@pytest.mark.parametrize("container_size, box_size, box_pos, valid", test_data5)
 def test_check_valid_box_placement(container_size, box_size, box_pos, valid):
     container = Container(container_size)
     box = Box(box_size, [-1, -1, -1], 0)
@@ -115,15 +114,15 @@ def test_check_valid_box_placement(container_size, box_size, box_pos, valid):
 
 
 # Test of Container.check_valid_box_placement -- large box in empty container
-container_size = [[10, 10, 10], [10, 10, 10]]
-box_size = [[2, 10, 3], [10, 2, 3]]
-box_pos = [[5, 0, 0], [2, 0, 0]]
-valid = [1, 0]
-test_data7 = zip(container_size, box_size, box_pos, valid)
+container_size6 = [[10, 10, 10], [10, 10, 10]]
+box_size6 = [[2, 10, 3], [10, 2, 3]]
+box_pos6 = [[5, 0, 0], [2, 0, 0]]
+valid6 = [1, 0]
+test_data6 = zip(container_size6, box_size6, box_pos6, valid6)
 
 
-@pytest.mark.parametrize("container_size, box_size, box_pos, valid", test_data7)
-def test_check_valid_box_placement(container_size, box_size, box_pos, valid):
+@pytest.mark.parametrize("container_size, box_size, box_pos, valid", test_data6)
+def test_check_valid_box_placement2(container_size, box_size, box_pos, valid):
     container = Container(container_size)
     box = Box(box_size, [-1, -1, -1], 0)
     is_valid2 = container.check_valid_box_placement(box, box_pos[0:2])
@@ -175,7 +174,7 @@ def test_pack_boxes():
 
 
 # Test of method Container.action_mask with a sequence of boxes
-def test_all_possible_positions():
+def test_packing_sequence():
     container = Container([10, 10, 10])
 
     # Create box0 and action mask for box0
@@ -277,31 +276,7 @@ def test_first_fit_decreasing():
     boxes = [box0, box1]
     container.reset
     container.first_fit_decreasing(boxes, 100)
-    box0 = container.boxes[0]
-    box1 = container.boxes[1]
-    np.testing.assert_array_equal(box0.position, [0, 0, 0])
-    np.testing.assert_array_equal(box1.position, [0, 0, 3])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    box2 = container.boxes[0]
+    box3 = container.boxes[1]
+    np.testing.assert_array_equal(box2.position, [0, 0, 0])
+    np.testing.assert_array_equal(box3.position, [0, 0, 3])
