@@ -9,7 +9,6 @@ from gym import make
 from gym.utils.env_checker import check_env
 import time
 
-
 num_rd_tests = 5
 num_items = rd.sample(range(50, 81), num_rd_tests)
 height = rd.sample(range(1, 1 + num_rd_tests + 1), num_rd_tests)
@@ -71,7 +70,6 @@ def test_sequence(basic_environment):
 
     # Check the size of the next incoming box (box1)
     assert_array_equal(obs['visible_box_sizes'], np.array([[3, 2, 3]]))
-
 
     # Set an action that is allowed for box 1
     action = 0
@@ -164,54 +162,81 @@ def test_reset():
     assert obs1['visible_box_sizes'].shape == (1, 3)
 
 
-def test_action_mask_sampling():
-    env = make('PackingEnv0', new_step_api=False, container_size=[10, 10, 10],
-               box_sizes=boxes_generator([10, 10, 10], 64, 42),
-               num_visible_boxes=1)
-    obs = env.reset()
-
-    for step_num in range(100):
-        action_mask = obs['action_mask']
-        action = env.action_space.sample(action_mask)
-        obs, reward, done, info = env.step(action)
-        env.render(mode='human')
-        time.sleep(5)
-        if done:
-            break
-
-    env.container.plot()
-
-
-@pytest.fixture
-def seeded_environment():
-    container_size = [11,11,11]
-    box_sizes = [[10, 1, 2], [10, 9, 1], [4, 9, 7], [1, 9, 7], [10, 1, 7], [10, 1, 1], [10, 1, 2], [10, 8, 2],
-                 [1, 9, 7], [4, 9, 7]]
-    env = make('PackingEnv0', new_step_api=False, container_size=container_size,
-               box_sizes=box_sizes, num_visible_boxes=1, render_mode='human')
-    return env
-
-def test_randomized_agent(seeded_environment):
-    env = seeded_environment
+def test_two_box_action_mask():
+    container_size1 = [3, 3, 3]
+    box_sizes1 = [[3, 3, 2], [2, 2, 2]]
+    env = make('PackingEnv0', new_step_api=False, container_size=container_size1,
+               box_sizes=box_sizes1, num_visible_boxes=1, render_mode='human')
     obs = env.reset(seed=5)
-    initial_sizes = [[10, 1, 2], [10, 9, 1], [4, 9, 7], [1, 9, 7], [10, 1, 7], [10, 1, 1], [10, 1, 2], [10, 8, 2],
-                 [1, 9, 7], [4, 9, 7]]
-    unpacked_sizes = [box.size for box in env.unpacked_hidden_boxes]
-    assert np.array_equal(np.asarray(initial_sizes, dtype=np.int32)[1:], np.asarray(unpacked_sizes, dtype=np.int32))
-    ac_m = np.zeros((11, 11), dtype=np.int32)
-    box0 = Box(initial_sizes[0], np.asarray([-1, -1, -1]), id_=0)
-    ac_m[0, :] = 1
-    ac_m[1, :] = 1
-    ac_m = np.reshape(ac_m, (121,))
-    action_mask = obs['action_mask']
-    assert np.array_equal(box0.size, env.unpacked_visible_boxes[0].size)
-    assert np.array_equal(action_mask, ac_m)
-
-    action = env.action_space.sample(action_mask)
+    action = env.position_to_action([0, 0])
     obs, reward, done, info = env.step(action)
+    np.testing.assert_array_equal(obs['action_mask'], np.array([0, 0, 0, 0, 0, 0, 0, 0, 0]))
+    fig = env.container.plot()
+    fig.show()
 
 
+def test_invalid_action():
+    container_size1 = [3, 3, 3]
+    box_sizes1 = [[3, 3, 2], [2, 2, 2]]
+    env = make('PackingEnv0', new_step_api=False, container_size=container_size1,
+               box_sizes=box_sizes1, num_visible_boxes=1, render_mode='human')
+    obs = env.reset(seed=5)
+    action_mask = obs['action_mask']
+    np.testing.assert_array_equal(action_mask, np.array([1, 0, 0, 0, 0, 0, 0, 0, 0]))
+    action = env.position_to_action([0, 0])
+    obs, reward, done, info = env.step(action)
+    np.testing.assert_array_equal(obs['action_mask'], np.array([0, 0, 0, 0, 0, 0, 0, 0, 0]))
+    action = env.position_to_action([0, 0])
+    # action should be invalid and the box should be skipped
+    obs, reward, done, info = env.step(action)
+    assert len(env.skipped_boxes) == 1
+    fig = env.container.plot()
+    fig.show()
 
 
-
-
+# def test_randomized_agent():
+#     box_sizes = [[2, 4, 4], [1, 5, 3], [1, 5, 2], [1, 5, 1], [1, 5, 3], [9, 2, 1], [1, 2, 1], [1, 4, 5], [1, 4, 5],
+#                  [8, 2, 1], [2, 2, 1], [1, 8, 1], [1, 8, 1], [5, 7, 1], [1, 3, 2], [1, 4, 4], [1, 1, 5], [1, 2, 5],
+#                  [1, 4, 3], [3, 1, 3], [2, 4, 2], [4, 2, 1], [4, 1, 2], [6, 1, 1], [4, 2, 1], [6, 2, 1], [2, 1, 1],
+#                  [3, 1, 1], [4, 2, 1], [4, 2, 3], [6, 2, 3], [4, 4, 1], [4, 1, 1], [5, 2, 1], [3, 5, 2], [3, 1, 2],
+#                  [3, 4, 2], [3, 3, 1], [3, 3, 1], [1, 4, 2], [1, 4, 2], [3, 1, 1], [1, 1, 1], [5, 1, 3], [5, 1, 3],
+#                  [3, 1, 2], [1, 1, 1], [5, 1, 1], [3, 3, 3], [5, 2, 1], [5, 2, 1], [1, 8, 2], [1, 8, 2], [1, 1, 2],
+#                  [1, 1, 3], [3, 1, 2], [3, 3, 2], [2, 3, 1], [3, 3, 1], [2, 5, 1], [3, 1, 3], [3, 2, 3], [2, 2, 2],
+#                  [2, 2, 2], [3, 1, 1], [3, 1, 1], [1, 5, 1], [3, 1, 1], [3, 4, 1], [3, 2, 1], [1, 2, 1], [4, 2, 1],
+#                  [4, 3, 1], [1, 5, 1], [4, 5, 1], [5, 1, 2], [5, 1, 2], [4, 1, 1], [4, 1, 1], [3, 2, 2], [3, 3, 2],
+#                  [6, 2, 1], [2, 1, 1], [2, 1, 1], [3, 2, 1], [3, 2, 1], [3, 1, 2], [1, 2, 1], [1, 2, 4], [3, 1, 2],
+#                  [3, 1, 2], [1, 1, 2], [1, 1, 1], [4, 1, 3], [4, 2, 3], [3, 1, 1], [3, 1, 2], [1, 4, 2], [1, 2, 2],
+#                  [1, 2, 2]]
+#
+#     box_ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 24, 26, 27, 28, 29, 32,
+#               35, 39, 40, 41, 42, 43, 44, 45, 46, 47, 53, 54, 55, 57, 60, 61, 62, 63, 64, 65, 66, 67, 70, 73, 77, 78,
+#               82, 83, 86, 87, 88, 89, 90, 91, 92, 95, 96, 97, 98, 99]
+#
+#     boxes_to_pack = [box_sizes[id] for id in box_ids]
+#
+#     position_boxes = [[5, 7, 0], [10, 3, 0], [1, 1, 0], [9, 6, 0], [2, 2, 0], [2, 0, 0], [0, 8, 0], [0, 4, 0],
+#                       [6, 3, 0], [2, 0, 1], [7, 8, 0], [3, 2, 0], [4, 2, 0], [4, 6, 1], [5, 2, 0], [1, 9, 0],
+#                       [8, 8, 1], [9, 6, 1], [2, 10, 0], [7, 3, 0], [6, 0, 2], [6, 1, 3], [2, 0, 2], [7, 4, 2],
+#                       [6, 1, 5], [2, 0, 3], [2, 0, 4], [7, 2, 0], [6, 1, 6], [3, 5, 1], [1, 1, 2], [3, 1, 7],
+#                       [6, 7, 4], [3, 1, 8],  [3, 1, 11], [2, 10, 3], [6, 9, 4], [3, 1, 14], [5, 3, 4], [7, 9, 1],
+#                       [3, 0, 7], [3, 6, 3],  [8, 2, 1], [3, 7, 4], [3, 7, 7], [3, 7, 9], [3, 1, 15], [3, 1, 16],
+#                       [6, 3, 5], [3, 1, 17], [2, 4, 3], [6, 3, 6], [6, 0, 3], [6, 0, 4], [4, 1, 18], [7, 6, 2],
+#                       [2, 10, 5], [3, 2, 1], [3, 7, 11], [8, 2, 4], [7, 0, 5], [8, 7, 0], [8, 1, 8], [8, 2, 6],
+#                       [3, 0, 9], [1, 1, 4], [0, 6, 5], [10, 8, 0]]
+#
+#     env = make('PackingEnv0', new_step_api=False, container_size=[11, 11, 11],
+#                box_sizes=boxes_to_pack, num_visible_boxes=1, render_mode='human')
+#     obs = env.reset(seed=5)
+#
+#     for step_num in range(len(box_ids)):
+#         action_mask = obs['action_mask']
+#         action = env.position_to_action(position_boxes[step_num][0:2])
+#         if step_num == 34:
+#             pass
+#         obs, reward, done, info = env.step(action)
+#         fig = env.container.plot()
+#         fig.show()
+#         time.sleep(0.2)
+#
+#     height_boxes = [box.position[2] + box.size[2] for box in env.packed_boxes]
+#     assert np.amax(height_boxes) <= 11

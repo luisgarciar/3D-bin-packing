@@ -26,6 +26,7 @@ def boxes_generator(bin_size: List[int], num_items: int = 64, seed: int = 42) ->
     A list of length num_items with the dimensions of the randomly generated boxes.
     """
     rd.seed(seed)
+
     dim = len(bin_size)
     # initialize the items list
     item_sizes = [bin_size]
@@ -199,7 +200,13 @@ def cuboid_fits(cuboid_a: List[int], cuboid_b: List[int]) -> bool:
     assert cuboid_b[5] > cuboid_b[2], "cuboid_b[5] must be greater than cuboid_b[2]"
 
     # Check if the cuboid b fits into the cuboid a
-    return np.all(cuboid_a[0:3] <= cuboid_b[0:3]) and np.all(cuboid_a[3:6] >= cuboid_b[3:6])
+    condition = cuboid_b[0] >= cuboid_a[0] and cuboid_b[1] >= cuboid_a[1] and cuboid_b[2] >= cuboid_a[2] and \
+                cuboid_b[3] <= cuboid_a[3] and cuboid_b[4] <= cuboid_a[4] and cuboid_b[5] <= cuboid_a[5]
+
+    return condition
+
+
+
 
 
 if __name__ == "__main__":

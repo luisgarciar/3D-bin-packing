@@ -25,7 +25,6 @@ from typing import List, Type
 from nptyping import NDArray, Int, Shape
 from src.utils import generate_vertices, boxes_generator, cuboids_intersection, cuboid_fits
 import plotly.graph_objects as go
-import vedo as vd
 import plotly.express as px
 
 
@@ -86,7 +85,7 @@ class Box:
     @property
     def volume(self) -> int:
         """ Area of the bottom face of the box """
-        return self.size[0] * self.size[1]*self.size[2]
+        return self.size[0] * self.size[1] * self.size[2]
 
     @property
     def vertices(self) -> List[np.ndarray]:
@@ -139,7 +138,8 @@ class Box:
             figure.add_trace(go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k, opacity=1, color=color,
                                        flatshading=True))
             # Plot the box edges
-            figure.add_trace(go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=0)))
+            figure.add_trace(
+                go.Scatter3d(x=vert_x, y=vert_y, z=vert_z, mode='lines', line=dict(color='black', width=0)))
 
         # figure.update_layout(scene=dict(xaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(x) + 1]),
         #                                yaxis=dict(nticks=int(np.max(x) + 2), range=[0, np.max(y) + 1]),
@@ -214,7 +214,7 @@ class Container:
         """
         # Add the height of the new box in the x-y coordinates occupied by the box
         self.height_map[box.position[0]: box.position[0] + box.size[0],
-                        box.position[1]: box.position[1] + box.size[1]] += box.size[2]
+        box.position[1]: box.position[1] + box.size[1]] += box.size[2]
 
     def __repr__(self):
         return f"Container id: {self.id_}, Size: {self.size[0]} x {self.size[1]} x {self.size[2]}, " \
@@ -275,13 +275,13 @@ class Container:
         bottom_face_lev = self.height_map[v0[0]:v0[0] + box.size[0], v0[1]:v0[1] + box.size[1]]
 
         # Check that the level of the corners is the maximum of all points in the bottom face
-        if np.array_equal(lev, np.amax(bottom_face_lev)) is False:
+        if not np.array_equal(lev, np.amax(bottom_face_lev)):
             return 0
 
         # Count how many of the points in the bottom face are supported at height equal to lev
         count_level = np.count_nonzero(bottom_face_lev == lev)
         # Check the percentage of box bottom area that is supported (at the height equal to lev)
-        support_perc = int((count_level / (box.size[0]*box.size[1]))*100)
+        support_perc = int((count_level / (box.size[0] * box.size[1])) * 100)
         if support_perc < check_area:
             return 0
 
@@ -290,21 +290,20 @@ class Container:
 
         # Check that the box fits in the container in the new location
         dummy_box_min_max = [dummy_box.position[0], dummy_box.position[1],
-                       dummy_box.position[2], dummy_box.position[0] + dummy_box.size[0],
-                       dummy_box.position[1] + dummy_box.size[1], dummy_box.position[2] + dummy_box.size[2]]
+                             dummy_box.position[2], dummy_box.position[0] + dummy_box.size[0],
+                             dummy_box.position[1] + dummy_box.size[1], dummy_box.position[2] + dummy_box.size[2]]
 
         container_min_max = [self.position[0], self.position[1], self.position[2],
                              self.position[0] + self.size[0], self.position[1] + self.size[1],
                              self.position[2] + self.size[2]]
 
-        if cuboid_fits(container_min_max, dummy_box_min_max) is False:
+        if not cuboid_fits(container_min_max, dummy_box_min_max):
             return 0
 
         # Check that the box does not overlap with other boxes in the container
         for other_box in self.boxes:
             if other_box.id_ == dummy_box.id_:
                 continue
-
             other_box_min_max = [other_box.position[0], other_box.position[1], other_box.position[2],
                                  other_box.position[0] + other_box.size[0], other_box.position[1] + other_box.size[1],
                                  other_box.position[2] + other_box.size[2]]
@@ -337,9 +336,9 @@ class Container:
             for j in range(0, self.size[1]):
                 if self.check_valid_box_placement(box, [i, j], check_area) == 1:
                     action_mask[i, j] = 1
-        return tuple([tuple(e) for e in action_mask])
+        return action_mask
 
-    def place_box(self, box: Type[Box], new_position: List[int], check_area = 100) -> None:
+    def place_box(self, box: Type[Box], new_position: List[int], check_area=100) -> None:
         """ Places a box in the container
         Parameters
         ----------
@@ -361,6 +360,9 @@ class Container:
         self._update_height_map(box)
 
     def plot(self, figure: Type[go.Figure] = None) -> Type[go.Figure]:
+        import plotly.io as pio
+        pio.renderers.default = "browser"
+
         """Adds the plot of a container with its boxes to a given figure
 
         Parameters
@@ -409,9 +411,9 @@ class Container:
         max_x = self.position[0] + self.size[0]
         max_y = self.position[1] + self.size[1]
         max_z = self.position[2] + self.size[2]
-        figure.update_layout(scene=dict(xaxis=dict(nticks=int(max_x + 2), range=[0, max_x + 1]),
-                                        yaxis=dict(nticks=int(max_y + 2), range=[0, max_y + 1]),
-                                        zaxis=dict(nticks=int(max_z + 2), range=[0, max_z + 1]),
+        figure.update_layout(scene=dict(xaxis=dict(nticks=int(max_x + 2), range=[0, max_x + 5]),
+                                        yaxis=dict(nticks=int(max_y + 2), range=[0, max_y + 5]),
+                                        zaxis=dict(nticks=int(max_z + 2), range=[0, max_z + 5]),
                                         aspectmode='cube'), width=1200, margin=dict(r=20, l=10, b=10, t=10))
 
         figure.update_scenes(xaxis_showgrid=False, yaxis_showgrid=False, zaxis_showgrid=False)
@@ -440,14 +442,14 @@ class Container:
             top_lev = self.size[2] - box.size[2]
             # max_occupied is the maximum height occupied by a box in the container
             max_occupied = np.max(self.height_map)
-            lev = min(top_lev,  max_occupied)
+            lev = min(top_lev, max_occupied)
 
             # We find the first position where the box can be placed starting from
             # the top level and going down
             k = lev
             while k >= 0:
                 locations = np.zeros(shape=(self.size[0], self.size[1]), dtype=np.int32)
-                kth_level = np.logical_and(self.height_map == k,  np.equal(action_mask, 1))
+                kth_level = np.logical_and(self.height_map == k, np.equal(action_mask, 1))
                 if kth_level.any():
                     locations[kth_level] = 1
                     # Find the first position where the box can be placed
@@ -470,6 +472,3 @@ if __name__ == "__main__":
     # show plot
     fig = container.plot()
     fig.show()
-
-
-

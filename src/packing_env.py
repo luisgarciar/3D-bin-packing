@@ -25,8 +25,11 @@ import numpy as np
 from typing import List, Type, Tuple, Optional
 from nptyping import NDArray, Int, Shape
 from src.packing_engine import Box, Container
+from src.utils import boxes_generator
 from gym.utils import seeding
 import copy
+import warnings
+import plotly.graph_objects as go
 
 
 class PackingEnv0(gym.Env):
@@ -165,6 +168,17 @@ class PackingEnv0(gym.Env):
 
         return position.astype(np.int32)
 
+    def position_to_action(self, position):
+        """Converts a position in the container to an action index
+        Returns
+        -------
+            action: int
+                Index in the container.
+        """
+        action = position[0] * self.container.size[0] + position[1]
+        return action
+
+
     def reset(self, seed=None, options={}, return_info=False) -> dict[str, object]:
         """ Reset the environment.
         Parameters
@@ -200,7 +214,7 @@ class PackingEnv0(gym.Env):
         visible_box_sizes = np.reshape(visible_box_sizes, (self.num_visible_boxes, 3))
         # Reset the state of the environment
         hm = np.asarray(self.container.height_map, dtype=np.int32)
-        action_mask = np.asarray(self.container.action_mask(box=self.unpacked_visible_boxes[0]),dtype=np.int8)
+        action_mask = np.asarray(self.container.action_mask(box=self.unpacked_visible_boxes[0]), dtype=np.int8)
 
         self.state = {'height_map': hm, 'visible_box_sizes': visible_box_sizes,
                       'action_mask': np.reshape(action_mask, (self.container.size[0]*self.container.size[1],))}
@@ -288,15 +302,33 @@ class PackingEnv0(gym.Env):
         """
         pass
 
-    def render(self, mode='human') -> None:
+    def render(self, mode='human') -> Type[go.Figure]:
         """ Render the environment.
         Args:
             mode: Mode to render the environment.
         """
         if mode == 'human':
-            self.container.plot()
+            return self.container.plot()
 
     def close(self) -> None:
         """ Close the environment.
         """
         pass
+
+
+if __name__ == "__main__":
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    env = gym.make('PackingEnv0', new_step_api=False, container_size=[11, 11, 11],
+                   box_sizes=boxes_generator([10, 10, 10], num_items=100, seed=5),
+                   num_visible_boxes=1, render_mode='human')
+    obs = env.reset()
+
+    for step_num in range(100):
+        action_mask = obs['action_mask']
+        action = env.action_space.sample(action_mask)
+        obs, reward, done, info = env.step(action)
+        if done:
+            break
+
+    fig = env.container.plot()
+    fig.show()

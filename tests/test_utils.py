@@ -63,16 +63,16 @@ def test_box_generator_custom():
 def test_cuboid_fits_in_bin():
     cuboid = [0, 0, 0, 1, 1, 1]
     bin = [0, 0, 0, 10, 10, 10]
-    assert utils.cuboid_fits_in_bin(cuboid, bin)
+    assert utils.cuboid_fits(bin, cuboid)
 
 
 def test_cuboid_fits_in_bin_false():
     cuboid = [0, 0, 0, 2, 2, 2]
     bin = [0, 0, 0, 1, 1, 1]
-    assert not utils.cuboid_fits_in_bin(cuboid, bin)
+    assert not utils.cuboid_fits(bin, cuboid)
 
 
 def test_cuboid_fits_in_bin_false2():
-    cuboid = [0, 0, 0, 1, 1, 1]
-    bin = [0, 0, 0, 2, 2, 2]
-    assert not utils.cuboid_fits_in_bin(cuboid, bin)
+    bin = [0, 0, 0, 3, 3, 3]
+    cuboid = [0, 0, 0, 2, 2, 4]
+    assert not utils.cuboid_fits(bin, cuboid)
