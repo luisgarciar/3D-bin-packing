@@ -2,7 +2,6 @@ import pytest
 import numpy as np
 from src.packing_kernel import Box, Container
 import random as rd
-# from src.utils import boxes_generator
 
 rd.seed(42)
 num_rd_tests = 5
@@ -173,7 +172,8 @@ def test_pack_boxes():
     np.testing.assert_array_equal(container.boxes[4].position, np.asarray([0, 5, 0]))
 
 
-# Test of method Container.action_mask with a sequence of boxes
+# Test of methods Container.action_mask, Container.height_map, Container.place_box with a sequence of boxes
+@pytest.mark.integtest
 def test_packing_sequence():
     container = Container([10, 10, 10])
 

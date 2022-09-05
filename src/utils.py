@@ -8,14 +8,16 @@ import numpy as np
 from copy import deepcopy
 
 
-def boxes_generator(bin_size: List[int], num_items: int = 64, seed: int = 42) -> List[List[int]]:
+def boxes_generator(
+    bin_size: List[int], num_items: int = 64, seed: int = 42
+) -> List[List[int]]:
     """Generates instances of the 2D and 3D bin packing problems
 
     Parameters
     ----------
     num_items: int, optional
         Number of boxes to be generated (default = 64)
-    bin_size: List[int], optional (default=[10,10,10])
+    bin_size: List[int], optional (default = [10,10,10])
         List of length 2 or 3 with the dimensions of the container (default = (10,10,10))
     seed: int, optional
         seed for the random number generator (default = 42)
@@ -61,8 +63,8 @@ def boxes_generator(bin_size: List[int], num_items: int = 64, seed: int = 42) ->
 
         # rotate boxes on the longest side
         # add boxes to the list of items
-        #box1.sort(reverse=True)
-        #box2.sort(reverse=True)
+        # box1.sort(reverse=True)
+        # box2.sort(reverse=True)
         item_sizes.extend([box1, box2])
 
     return item_sizes
@@ -71,18 +73,18 @@ def boxes_generator(bin_size: List[int], num_items: int = 64, seed: int = 42) ->
 def generate_vertices(cuboid_len_edges, cuboid_position) -> NDArray[Shape["3, 8"], Int]:
     """Generates the vertices of a box or container in the correct format to be plotted
 
-      Parameters
-      ----------
-      cuboid_position: List[int]
-            List of length 3 with the coordinates of the back-bottom-left vertex of the box or container
-      cuboid_len_edges: List[int]
-          List of length 3 with the dimensions of the box or container
+    Parameters
+    ----------
+    cuboid_position: List[int]
+          List of length 3 with the coordinates of the back-bottom-left vertex of the box or container
+    cuboid_len_edges: List[int]
+        List of length 3 with the dimensions of the box or container
 
-      Returns
-      -------
-      np.nd.array(np.int32)
-      An array of shape (3,8) with the coordinates of the vertices of the box or container
-      """
+    Returns
+    -------
+    np.nd.array(np.int32)
+    An array of shape (3,8) with the coordinates of the vertices of the box or container
+    """
     # Generate the list of vertices by adding the lengths of the edges to the coordinates
     v0 = cuboid_position
     v0 = np.asarray(v0, dtype=np.int32)
@@ -158,9 +160,11 @@ def cuboids_intersection(cuboid_a: List[int], cuboid_b: List[int]) -> bool:
     assert cuboid_b[1] < cuboid_b[4], "cuboid_b[4] must be greater than cuboid_b[1]"
     assert cuboid_b[2] < cuboid_b[5], "cuboid_b[5] must be greater than cuboid_b[2]"
 
-    inter = [interval_intersection([cuboid_a[0], cuboid_a[3]], [cuboid_b[0], cuboid_b[3]]),
-             interval_intersection([cuboid_a[1], cuboid_a[4]], [cuboid_b[1], cuboid_b[4]]),
-             interval_intersection([cuboid_a[2], cuboid_a[5]], [cuboid_b[2], cuboid_b[5]])]
+    inter = [
+        interval_intersection([cuboid_a[0], cuboid_a[3]], [cuboid_b[0], cuboid_b[3]]),
+        interval_intersection([cuboid_a[1], cuboid_a[4]], [cuboid_b[1], cuboid_b[4]]),
+        interval_intersection([cuboid_a[2], cuboid_a[5]], [cuboid_b[2], cuboid_b[5]]),
+    ]
 
     return np.all(inter)
 
@@ -200,13 +204,16 @@ def cuboid_fits(cuboid_a: List[int], cuboid_b: List[int]) -> bool:
     assert cuboid_b[5] > cuboid_b[2], "cuboid_b[5] must be greater than cuboid_b[2]"
 
     # Check if the cuboid b fits into the cuboid a
-    condition = cuboid_b[0] >= cuboid_a[0] and cuboid_b[1] >= cuboid_a[1] and cuboid_b[2] >= cuboid_a[2] and \
-                cuboid_b[3] <= cuboid_a[3] and cuboid_b[4] <= cuboid_a[4] and cuboid_b[5] <= cuboid_a[5]
+    condition = (
+        cuboid_b[0] >= cuboid_a[0]
+        and cuboid_b[1] >= cuboid_a[1]
+        and cuboid_b[2] >= cuboid_a[2]
+        and cuboid_b[3] <= cuboid_a[3]
+        and cuboid_b[4] <= cuboid_a[4]
+        and cuboid_b[5] <= cuboid_a[5]
+    )
 
     return condition
-
-
-
 
 
 if __name__ == "__main__":
