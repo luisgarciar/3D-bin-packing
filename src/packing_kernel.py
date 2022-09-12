@@ -19,19 +19,20 @@ We follow the space representation depicted below, all coordinates and lengths o
         Container
 
 """
-import numpy as np
 from copy import deepcopy
 from typing import List, Type
+
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
 from nptyping import NDArray, Int, Shape
+
 from src.utils import (
     generate_vertices,
     boxes_generator,
     cuboids_intersection,
     cuboid_fits,
 )
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly_gif import GIF, capture
 
 
 class Box:
@@ -99,10 +100,10 @@ class Box:
         return self.size[0] * self.size[1] * self.size[2]
 
     @property
-    def vertices(self) -> List[np.ndarray]:
+    def vertices(self) -> NDArray:
         """Returns a list with the vertices of the box"""
         vert = generate_vertices(self.size, self.position)
-        return list(vert)
+        return np.asarray(vert, dtype=np.int32)
 
     def __repr__(self):
         return (
@@ -218,14 +219,19 @@ class Container:
         Lengths of the edges of the container
     position: NDArray[Shape["1,3"],Int]
         Coordinates of the bottom-leftmost-deepest corner of the container
-    boxes: List[Type[Box]]
+    boxes: List[Box]
         List with the boxes placed inside the container
     height_map: NDArray[Shape["*,*"],Int]
         An array of size (size[0],size[1]) representing the height map (top view) of the container,
         where height_map[i,j] is the current height of stacked items at position (i,j).
     """
 
-    def __init__(self, size: List[int], position=None, id_: int = 0) -> None:
+    def __init__(
+        self,
+        size: NDArray[Shape["1,3"], Int],
+        position: NDArray[Shape["1,3"], Int] = None,
+        id_: int = 0,
+    ) -> None:
         """Initializes a 3D container
 
         Parameters
@@ -286,14 +292,14 @@ class Container:
         return deepcopy(self.height_map)
 
     def check_valid_box_placement(
-        self, box: Type[Box], new_pos: List[int], check_area: int = 100
-    ) -> int:  # Add different checkmodes?
+        self, box: Box, new_pos: NDArray, check_area: int = 100
+    ) -> int:
         """
         Parameters
         ----------
         box: Box
             Box to be placed
-        new_pos: List[int]
+        new_pos: NDArray[int]
             Coordinates of new position
         check_area: int, default = 100
              Percentage of area of the bottom of the box that must be supported in the new position
@@ -305,7 +311,7 @@ class Container:
         assert len(new_pos) == 2
 
         # Generate the vertices of the bottom face of the box
-        v = generate_vertices(box.size, [*new_pos, 1])
+        v = generate_vertices(np.asarray(box.size), np.asarray([*new_pos, 1]))
         # bottom vertices of the box
         v0, v1, v2, v3 = v[0, :], v[1, :], v[2, :], v[3, :]
 
@@ -325,18 +331,18 @@ class Container:
             return 0
 
         # Check that the bottom vertices of the box in the new position are at the same level
-        corners_levs = [
+        corners_levels = [
             self.height_map[v0[0], v0[1]],
             self.height_map[v1[0] - 1, v1[1]],
             self.height_map[v2[0], v2[1] - 1],
             self.height_map[v3[0] - 1, v3[1] - 1],
         ]
 
-        if corners_levs.count(corners_levs[0]) != len(corners_levs):
+        if corners_levels.count(corners_levels[0]) != len(corners_levels):
             return 0
 
         # lev is the level (height) at which the bottom corners of the box will be located
-        lev = corners_levs[0]
+        lev = corners_levels[0]
         # bottom_face_lev contains the levels of all the points in the bottom face
         bottom_face_lev = self.height_map[
             v0[0] : v0[0] + box.size[0], v0[1] : v0[1] + box.size[1]
@@ -398,7 +404,7 @@ class Container:
         return 1
 
     def action_mask(
-        self, box: Type[Box], check_area: int = 100
+        self, box: Box, check_area: int = 100
     ) -> NDArray[Shape["*, *"], Int]:
         """Returns an array with all possible positions for a box in the container
         array[i,j] = 1 if the box can be placed in position (i,j), 0 otherwise
@@ -419,13 +425,16 @@ class Container:
         # Generate all possible positions for the box in the container
         for i in range(0, self.size[0]):
             for j in range(0, self.size[1]):
-                if self.check_valid_box_placement(box, [i, j], check_area) == 1:
+                if (
+                    self.check_valid_box_placement(
+                        box, np.array([i, j], dtype=np.int32), check_area
+                    )
+                    == 1
+                ):
                     action_mask[i, j] = 1
         return action_mask
 
-    def place_box(
-        self, box: Type[Box], new_position: List[int], check_area=100
-    ) -> None:
+    def place_box(self, box: Box, new_position: List[int], check_area=100) -> None:
         """Places a box in the container
         Parameters
         ----------
@@ -449,10 +458,6 @@ class Container:
         self._update_height_map(box)
 
     def plot(self, figure: Type[go.Figure] = None) -> Type[go.Figure]:
-        import plotly.io as pio
-
-        # pio.renderers.default = "browser"
-
         """Adds the plot of a container with its boxes to a given figure
 
         Parameters
@@ -483,12 +488,6 @@ class Container:
             (5, 7),
             (6, 7),
         ]
-
-        # The arrays i, j, k contain the indices of the triangles to be plotted (two per each face of the box)
-        # The triangles have vertices (x[i[index]], y[j[index]], z[k[index]]), index = 0,1,..7.
-        i = [1, 2, 5, 6, 1, 4, 3, 6, 1, 7, 0, 6]
-        j = [0, 3, 4, 7, 0, 5, 2, 7, 3, 5, 2, 4]
-        k = [2, 1, 6, 5, 4, 1, 6, 3, 7, 1, 6, 0]
 
         # Add a line between each pair of edges to the figure
         for (m, n) in edge_pairs:
@@ -555,9 +554,7 @@ class Container:
 
         return figure
 
-    def first_fit_decreasing(
-        self, boxes: List[Type[Box]], check_area: int = 100
-    ) -> None:
+    def first_fit_decreasing(self, boxes: List[Box], check_area: int = 100) -> None:
         """Places all boxes in the container using the first fit decreasing heuristic method
         Parameters
         ----------
@@ -609,7 +606,7 @@ if __name__ == "__main__":
         Box(size, position=[-1, -1, -1], id_=i) for i, size in enumerate(boxes_sizes)
     ]
     # We pack the boxes in a bigger container since the heuristic rule is not optimal
-    container = Container([12, 12, 12])
+    container = Container(np.array([12, 12, 12], dtype=np.int32))
     # The parameter 'check_area' gives the percentage of the bottom area of the box that must be supported
     container.first_fit_decreasing(boxes, check_area=100)
     # show plot

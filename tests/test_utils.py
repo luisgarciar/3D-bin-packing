@@ -1,7 +1,7 @@
-import pytest
-import numpy as np
-from src import utils
 import random as rd
+import numpy as np
+import pytest
+from src import utils
 
 # Data for random tests
 rd.seed(42)
