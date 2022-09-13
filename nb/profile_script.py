@@ -37,21 +37,6 @@ if __name__ == "__main__":
         render_mode="rgb_array",
     )
 
-    # obs = env.reset()
-    # images = []
-    # gif = GIF()
-    # for step_num in range(80):
-    #     fig = env.render()
-    #     gif.create_image(fig)
-    #     action_mask = obs["action_mask"]
-    #     action = env.action_space.sample(action_mask)
-    #     obs, reward, done, info = env.step(action)
-    #     if done:
-    #         break
-    #
-    # gif.create_gif()
-    # gif.save_gif("test.gif")
-
     # Run the random agent without saving the gif
     obs = env.reset()
     images = []
