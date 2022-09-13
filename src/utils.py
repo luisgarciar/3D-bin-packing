@@ -1,11 +1,12 @@
 """
 Utilities for the Bin Packing Problem
 """
-from typing import List
-from nptyping import NDArray, Int, Shape
 import random as rd
-import numpy as np
 from copy import deepcopy
+from typing import List
+
+import numpy as np
+from nptyping import NDArray, Int, Shape
 
 
 def boxes_generator(
@@ -70,7 +71,9 @@ def boxes_generator(
     return item_sizes
 
 
-def generate_vertices(cuboid_len_edges, cuboid_position) -> NDArray[Shape["3, 8"], Int]:
+def generate_vertices(
+    cuboid_len_edges: NDArray, cuboid_position: NDArray
+) -> NDArray[Shape["3, 8"], Int]:
     """Generates the vertices of a box or container in the correct format to be plotted
 
     Parameters
@@ -125,11 +128,11 @@ def cuboids_intersection(cuboid_a: List[int], cuboid_b: List[int]) -> bool:
     Parameters
     ----------
     cuboid_a: List[int]
-        List of length 6 [xmin_a, y_mina, zmin_a, xmax_a, ymax_a, zmax_a]
+        List of length 6 [x_min_a, y_mina, z_min_a, x_max_a, y_max_a, z_max_a]
         with the start and end coordinates of the first cuboid in each axis
 
     cuboid_b: List[int]
-        List of length 6 [xmin_b, y_minb, zmin_b, xmax_b, ymax_b, zmax_b]
+        List of length 6 [x_min_b, y_min_b, z_min_b, x_max_b, y_max_b, z_max_b]
         with the start and end coordinates of the second cuboid in each axis
 
     Returns
@@ -137,28 +140,24 @@ def cuboids_intersection(cuboid_a: List[int], cuboid_b: List[int]) -> bool:
     bool
     True if the cuboids intersect, False otherwise
     """
-    assert len(cuboid_a) == 6, "cuboid_a must be a list of length 3"
-    assert len(cuboid_b) == 6, "cuboid_b must be a list of length 3"
+    assert len(cuboid_a) == 6, "cuboid_a must be a list of length 6"
+    assert len(cuboid_b) == 6, "cuboid_b must be a list of length 6"
 
     # Check the coordinates of the back-bottom-left vertex of the first cuboid
-    assert cuboid_a[0] >= 0, "cuboid_a[0] must be greater than or equal to 0"
-    assert cuboid_a[1] >= 0, "cuboid_a[1] must be greater than or equal to 0"
-    assert cuboid_a[2] >= 0, "cuboid_a[2] must be greater than or equal to 0"
+    assert np.all(
+        np.less_equal([0, 0, 0], cuboid_a[:3])
+    ), "cuboid_a must have nonnegative coordinates"
+    assert np.all(
+        np.less_equal([0, 0, 0], cuboid_b[:3])
+    ), "cuboid_b must have nonnegative coordinates"
 
-    # Check the maximum coordinates of the first cuboid
-    assert cuboid_a[0] < cuboid_a[3], "cuboid_a[1] must be greater than cuboid_a[0]"
-    assert cuboid_a[1] < cuboid_a[4], "cuboid_a[4] must be greater than cuboid_a[1]"
-    assert cuboid_a[2] < cuboid_a[5], "cuboid_a[5] must be greater than cuboid_a[2]"
+    assert np.all(
+        np.less(cuboid_a[:3], cuboid_a[3:])
+    ), "cuboid_a must have nonzero volume"
 
-    # Check the coordinates of the back-bottom-left vertex of the second cuboid
-    assert cuboid_b[0] >= 0, "cuboid_b[0] must be greater than or equal to 0"
-    assert cuboid_b[1] >= 0, "cuboid_b[1] must be greater than or equal to 0"
-    assert cuboid_b[2] >= 0, "cuboid_b[2] must be greater than or equal to 0"
-
-    # Check the dimensions of the second cuboid
-    assert cuboid_b[0] < cuboid_b[3], "cuboid_b[3] must be greater than cuboid_b[0]"
-    assert cuboid_b[1] < cuboid_b[4], "cuboid_b[4] must be greater than cuboid_b[1]"
-    assert cuboid_b[2] < cuboid_b[5], "cuboid_b[5] must be greater than cuboid_b[2]"
+    assert np.all(
+        np.less(cuboid_b[:3], cuboid_b[3:])
+    ), "cuboid_b must have nonzero volume"
 
     inter = [
         interval_intersection([cuboid_a[0], cuboid_a[3]], [cuboid_b[0], cuboid_b[3]]),
@@ -174,10 +173,10 @@ def cuboid_fits(cuboid_a: List[int], cuboid_b: List[int]) -> bool:
     Parameters
     ----------
     cuboid_a: List[int]
-        List of length 6 [xmin_a, y_mina, zmin_a, xmax_a, ymax_a, zmax_a]
+        List of length 6 [x_min_a, y_mina, z_min_a, x_max_a, y_max_a, z_max_a]
         with the start and end coordinates of the first cuboid in each axis
     cuboid_b: List[int]
-        List of length 6 [xmin_b, y_minb, zmin_b, xmax_b, ymax_b, zmax_b]
+        List of length 6 [x_min_b, y_min_b, z_min_b, x_max_b, y_max_b, z_max_b]
         with the start and end coordinates of the second cuboid in each axis
     Returns
     -------
@@ -187,33 +186,29 @@ def cuboid_fits(cuboid_a: List[int], cuboid_b: List[int]) -> bool:
     assert len(cuboid_a) == 6, "cuboid_a must be a list of length 3"
     assert len(cuboid_b) == 6, "cuboid_b must be a list of length 3"
 
-    # Check the coordinates of the first cuboid
-    assert cuboid_a[0] >= 0, "cuboid_a[0] must be greater than or equal to 0"
-    assert cuboid_a[1] >= 0, "cuboid_a[1] must be greater than or equal to 0"
-    assert cuboid_a[2] >= 0, "cuboid_a[2] must be greater than or equal to 0"
-    assert cuboid_a[3] > cuboid_a[0], "cuboid_a[3] must be greater than cuboid_a[0]"
-    assert cuboid_a[4] > cuboid_a[1], "cuboid_a[4] must be greater than cuboid_a[1]"
-    assert cuboid_a[5] > cuboid_a[2], "cuboid_a[5] must be greater than cuboid_a[2]"
+    assert len(cuboid_a) == 6, "cuboid_a must be a list of length 6"
+    assert len(cuboid_b) == 6, "cuboid_b must be a list of length 6"
 
-    # Check the coordinates of the second cuboid
-    assert cuboid_b[0] >= 0, "cuboid_b[0] must be greater than or equal to 0"
-    assert cuboid_b[1] >= 0, "cuboid_b[1] must be greater than or equal to 0"
-    assert cuboid_b[2] >= 0, "cuboid_b[2] must be greater than or equal to 0"
-    assert cuboid_b[3] > cuboid_b[0], "cuboid_b[3] must be greater than cuboid_b[0]"
-    assert cuboid_b[4] > cuboid_b[1], "cuboid_b[4] must be greater than cuboid_b[1]"
-    assert cuboid_b[5] > cuboid_b[2], "cuboid_b[5] must be greater than cuboid_b[2]"
+    # Check the coordinates of the back-bottom-left vertex of the first cuboid
+    assert np.all(
+        np.less_equal([0, 0, 0], cuboid_a[:3])
+    ), "cuboid_a must have nonnegative coordinates"
+    assert np.all(
+        np.less_equal([0, 0, 0], cuboid_b[:3])
+    ), "cuboid_b must have nonnegative coordinates"
+
+    assert np.all(
+        np.less(cuboid_a[:3], cuboid_a[3:])
+    ), "cuboid_a must have nonzero volume"
+
+    assert np.all(
+        np.less(cuboid_b[:3], cuboid_b[3:])
+    ), "cuboid_b must have nonzero volume"
 
     # Check if the cuboid b fits into the cuboid a
-    condition = (
-        cuboid_b[0] >= cuboid_a[0]
-        and cuboid_b[1] >= cuboid_a[1]
-        and cuboid_b[2] >= cuboid_a[2]
-        and cuboid_b[3] <= cuboid_a[3]
-        and cuboid_b[4] <= cuboid_a[4]
-        and cuboid_b[5] <= cuboid_a[5]
+    return np.all(np.less_equal(cuboid_a[:3], cuboid_b[:3])) and np.all(
+        np.less_equal(cuboid_b[3:], cuboid_a[3:])
     )
-
-    return condition
 
 
 if __name__ == "__main__":

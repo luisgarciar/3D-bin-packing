@@ -1,10 +1,6 @@
 """ Basic agents for 3D packing problems."""
 
-import gym
-from gym.spaces import dict
-import numpy as np
-from typing import List, Type, Tuple, Dict
-from src.packing_kernel import Box, Container
+from typing import Dict
 
 
 def rnd_agent(observation: Dict) -> Dict:

@@ -1,7 +1,9 @@
-import pytest
-import numpy as np
-from src.packing_kernel import Box, Container
 import random as rd
+
+import numpy as np
+import pytest
+
+from src.packing_kernel import Box, Container
 
 rd.seed(42)
 num_rd_tests = 5
@@ -11,7 +13,7 @@ length0 = rd.sample(range(2, 2 + num_rd_tests + 2), num_rd_tests)
 width0 = rd.sample(range(3, 3 + num_rd_tests + 2), num_rd_tests)
 pos_x0 = rd.sample(range(0, num_rd_tests + 2), num_rd_tests)
 pos_y0 = rd.sample(range(0, num_rd_tests + 2), num_rd_tests)
-pos_z0 = rd.sample(range(0, num_rd_tests + 2), num_rd_tests)*0
+pos_z0 = rd.sample(range(0, num_rd_tests + 2), num_rd_tests) * 0
 sizes0 = zip(height0, length0, width0)
 positions0 = zip(pos_x0, pos_y0, pos_z0)
 test_data0 = zip(sizes0, positions0)
@@ -52,10 +54,28 @@ def test_box_initialization_random_data(size, position):
 container_size2 = [[6, 6, 10], [6, 8, 10]]
 box_size2 = [[2, 2, 5], [2, 8, 3]]
 box_pos2 = [[3, 3, 0], [2, 0, 0]]
-hm1 = np.array([[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 5, 5, 0],
-                [0, 0, 0, 5, 5, 0], [0, 0, 0, 0, 0, 0]], dtype=np.int32)
-hm2 = np.array([[0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [3, 3, 3, 3, 3, 3, 3, 3],
-                [3, 3, 3, 3, 3, 3, 3, 3], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.int32)
+hm1 = np.array(
+    [
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 5, 5, 0],
+        [0, 0, 0, 5, 5, 0],
+        [0, 0, 0, 0, 0, 0],
+    ],
+    dtype=np.int32,
+)
+hm2 = np.array(
+    [
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [3, 3, 3, 3, 3, 3, 3, 3],
+        [3, 3, 3, 3, 3, 3, 3, 3],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+    ],
+    dtype=np.int32,
+)
 height_map2 = [hm1, hm2]
 test_data2 = zip(container_size2, box_size2, box_pos2, height_map2)
 
@@ -84,8 +104,30 @@ def test_box_area_bottom(box_size, box_pos, area):
 # Test of Box property vertices
 box_size4 = [[2, 2, 5], [2, 8, 3]]
 box_pos4 = [[3, 3, 0], [2, 0, 0]]
-vert_14 = np.asarray([[3, 3, 0], [5, 3, 0], [3, 5, 0], [5, 5, 0], [3, 3, 5], [5, 3, 5], [3, 5, 5], [5, 5, 5]])
-vert_24 = np.asarray([[2, 0, 0], [4, 0, 0], [2, 8, 0], [4, 8, 0], [2, 0, 3], [4, 0, 3], [2, 8, 3], [4, 8, 3]])
+vert_14 = np.asarray(
+    [
+        [3, 3, 0],
+        [5, 3, 0],
+        [3, 5, 0],
+        [5, 5, 0],
+        [3, 3, 5],
+        [5, 3, 5],
+        [3, 5, 5],
+        [5, 5, 5],
+    ]
+)
+vert_24 = np.asarray(
+    [
+        [2, 0, 0],
+        [4, 0, 0],
+        [2, 8, 0],
+        [4, 8, 0],
+        [2, 0, 3],
+        [4, 0, 3],
+        [2, 8, 3],
+        [4, 8, 3],
+    ]
+)
 vertices4 = [vert_14, vert_24]
 test_data4 = zip(box_size4, box_pos4, vertices4)
 
@@ -270,7 +312,7 @@ def test_packing_sequence():
 
 def test_first_fit_decreasing():
     # Create container and action mask for container
-    container = Container([10, 10, 10])
+    container = Container(np.array([10, 10, 10], dtype=np.int32))
     box0 = Box([3, 3, 3], [-1, -1, -1], 0)
     box1 = Box([3, 2, 3], [-1, -1, -1], 1)
     boxes = [box0, box1]

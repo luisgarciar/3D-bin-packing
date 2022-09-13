@@ -19,20 +19,22 @@ We follow the space representation depicted below, all coordinates and lengths o
         Container
 
 """
-import gym
-from gym.spaces import Discrete, MultiDiscrete, MultiBinary
-import numpy as np
-from typing import List, Type, Tuple, Optional
-from nptyping import NDArray, Int, Shape
-from src.packing_kernel import Box, Container
-from src.utils import boxes_generator
-from gym.utils import seeding
 import copy
 import warnings
+from typing import List, Tuple, Union
+
+import gym
+import numpy as np
 import plotly.graph_objects as go
+from gym.spaces import Discrete, MultiDiscrete, MultiBinary
+from gym.utils import seeding
+from nptyping import NDArray
+
+from src.packing_kernel import Box, Container
+from src.utils import boxes_generator
 
 
-class PackingEnv0(gym.Env):
+class PackingEnv(gym.Env):
     """A class to represent the packing environment.
 
     Description:
@@ -56,18 +58,17 @@ class PackingEnv0(gym.Env):
                         boxes
 
         Action:
-        Type:  Discrete(container.size[0]*container.size[1])
-        The agent chooses an integer j in the range [0, container.size[0]*container.size[1]), representing the position
-        (x,y) = (j//container.size[1], j%container.size[1]) in the container.
-
-        TO DO: Define action space for num_visible_boxes > 1
+        Type:  Discrete(container.size[0]*container.size[1]*num_visible_boxes)
+        The agent chooses an integer j in the range [0, container.size[0]*container.size[1]*num_visible_boxes)),
+        and the action is interpreted as follows: the box with index  j // (container.size[0]*container.size[1])
+        is placed in the position (x,y) = (j//container.size[1], j%container.size[1]) in the container.
 
         Reward:
         To be defined
 
         Starting State:
         height_map is initialized as a zero array and the list of upcoming boxes is initialized as a random list of
-        length num_upcoming_boxes from the complete list of boxes.
+        length num_visible_boxes from the complete list of boxes.
 
         Episode Termination:
         The episode is terminated when all the boxes are placed in the container or when the container is full.
@@ -84,6 +85,7 @@ class PackingEnv0(gym.Env):
         box_sizes: List[List[int]],
         num_visible_boxes: int = 1,
         render_mode: str = "human",
+        options: dict = None,
     ) -> None:
         """Initialize the environment.
 
@@ -129,32 +131,33 @@ class PackingEnv0(gym.Env):
             shape=(container_size[0], container_size[1]), dtype=np.int32
         ) * (container_size[2] + 1)
 
-        # Array to define the MultiDiscrete space with the action mask
-        # action_mask_repr = np.ones(shape=(container_size[0], container_size[1]), dtype=np.int8)*2
-        # The action mask is a 1D binary array with the same length as the number of positions in the container
-
+        # The action mask is a Multibinary array with the same length as the number of positions
+        # in the container times the number of visible boxes
         # Dict to define the observation space
         observation_dict = {
             "height_map": MultiDiscrete(height_map_repr),
             "visible_box_sizes": MultiDiscrete(box_repr),
-            "action_mask": MultiBinary(container_size[0] * container_size[1]),
+            "action_mask": MultiBinary(
+                container_size[0] * container_size[1] * num_visible_boxes
+            ),
         }
 
         # Observation space
         self.observation_space = gym.spaces.Dict(observation_dict)
+        # Action space
+        self.action_space = Discrete(
+            container_size[0] * container_size[1] * num_visible_boxes
+        )
 
-        if num_visible_boxes > 1:
-            # Dict to define the action space for num_visible_boxes > 1
-            action_dict = {
-                "box_index": Discrete(num_visible_boxes),
-                "position": MultiDiscrete([container_size[0], container_size[1]]),
-            }
-            self.action_space = gym.spaces.Dict(action_dict)
-
-        else:
-            # Action space for num_visible_boxes = 1
-            # action_dict = {'position': MultiDiscrete([container_size[0], container_size[1]])}
-            self.action_space = Discrete(container_size[0] * container_size[1])
+        # if num_visible_boxes > 1:
+        #     # Dict to define the action space for num_visible_boxes > 1
+        #     action_dict = {
+        #         "box_index": Discrete(num_visible_boxes),
+        #         "position": MultiDiscrete([container_size[0], container_size[1]]),
+        #     }
+        #     self.action_space = gym.spaces.Dict(action_dict)
+        #
+        # else:
 
     def seed(self, seed: int = 42):
         """Seed the random number generator for the environment.
@@ -166,34 +169,44 @@ class PackingEnv0(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def action_to_position(self, action: int) -> List[int]:
-        """Converts an index to a position in the container.
+    def action_to_position(self, action: int) -> Tuple[int, NDArray]:
+        """Converts an index to a tuple with a box index
+        and a position in the container.
         Parameters
         ----------
             action: int
                 Index to be converted.
         Returns
         -------
+            box_index: int
+                Index of the box to be placed.
             position: ndarray
                 Position in the container.
         """
+        box_index = action // (self.container.size[0] * self.container.size[1])
+        res = action % (self.container.size[0] * self.container.size[1])
+
         position = np.array(
-            [action // self.container.size[0], action % self.container.size[0]]
+            [res // self.container.size[0], res % self.container.size[0]]
         )
 
-        return position.astype(np.int32)
+        return box_index, position.astype(np.int32)
 
-    def position_to_action(self, position):
+    def position_to_action(self, position, box_index=0):
         """Converts a position in the container to an action index
         Returns
         -------
             action: int
                 Index in the container.
         """
-        action = position[0] * self.container.size[0] + position[1]
+        action = (
+            box_index * self.container.size[0] * self.container.size[1]
+            + position[0] * self.container.size[0]
+            + position[1]
+        )
         return action
 
-    def reset(self, seed=None, options={}, return_info=False) -> dict[str, object]:
+    def reset(self, seed=None, options=None, return_info=False) -> dict[str, object]:
         """Reset the environment.
         Parameters
         ----------
@@ -201,13 +214,13 @@ class PackingEnv0(gym.Env):
                 Seed for the environment.
             options: dict
                 Options for the environment.
-            return_info: bool
-                If True, return additional information about the environment.
         Returns
         ----------
             dict: Dictionary with the observation of the environment.
         """
-        # Check: add info, return info
+        if return_info:
+            info = {}
+
         self.container.reset()
         # Reset the list of boxes that are not yet packed and not visible to the agent
         self.unpacked_hidden_boxes = copy.deepcopy(self.initial_boxes)
@@ -247,32 +260,26 @@ class PackingEnv0(gym.Env):
         self.done = False
         self.seed(seed)
 
-        if return_info is False:
-            return self.state
+        if return_info:
+            return self.state, info
         else:
-            return self.state, {}
+            return self.state
 
-    def step(self, action: dict) -> Tuple[NDArray, float, bool, bool, dict]:
+    def step(self, action: int) -> Tuple[NDArray, float, bool, dict]:
         """Step the environment.
         Parameters:
         -----------
-            action: Dictionary with the action to be taken.
+            action: integer with the action to be taken.
         Returns:
         ----------
             observation: Dictionary with the observation of the environment.
             reward: Reward for the action.
-            truncated: Whether the episode is truncated.
             terminated: Whether the episode is terminated.
             info: Dictionary with additional information.
         """
-        # Get the index of the box to be placed in the container
-        if self.num_visible_boxes > 1:
-            box_index = action["box_index"]
-        else:
-            box_index = 0
 
-        # Get the position of the box to be placed in the container
-        position = self.action_to_position(action)
+        # Get the index and position of the box to be placed in the container
+        box_index, position = self.action_to_position(action)
         # Check if the action is valid
         # TO DO: add parameter check area, add info, return info
         if (
@@ -310,7 +317,6 @@ class PackingEnv0(gym.Env):
         if len(self.unpacked_visible_boxes) == 0:
             self.done = True
             terminated = self.done
-            truncated = False
             self.state["visible_box_sizes"] = []
             # TO DO: add info, return info
         else:
@@ -329,9 +335,8 @@ class PackingEnv0(gym.Env):
             )
 
             terminated = False
-            truncated = False
 
-        return self.state, reward, truncated, terminated, {}
+        return self.state, reward, terminated, {}
 
     def compute_reward(self) -> float:
         """Compute the reward for the action.
@@ -341,7 +346,7 @@ class PackingEnv0(gym.Env):
         """
         pass
 
-    def render(self, mode="human") -> Type[go.Figure]:
+    def render(self, mode="human") -> Union[go.Figure, NDArray]:
         """Render the environment.
         Args:
             mode: Mode to render the environment.
@@ -364,23 +369,32 @@ class PackingEnv0(gym.Env):
 
 
 if __name__ == "__main__":
+    from src.utils import boxes_generator
+    from gym import make
+    import warnings
+    from plotly_gif import GIF
+
+    # Ignore plotly and gym deprecation warnings
     warnings.filterwarnings("ignore", category=DeprecationWarning)
-    env = gym.make(
-        "PackingEnv0",
-        new_step_api=False,
-        container_size=[11, 11, 11],
-        box_sizes=boxes_generator([10, 10, 10], num_items=100, seed=5),
+
+    # Environment initialization
+    env = make(
+        "PackingEnv-v0",
+        container_size=[10, 10, 10],
+        box_sizes=boxes_generator([10, 10, 10], 64, 42),
         num_visible_boxes=1,
-        render_mode="human",
     )
     obs = env.reset()
 
-    for step_num in range(100):
+    gif = GIF(gif_name="random_rollout.gif", gif_path="../gifs")
+    for step_num in range(80):
+        fig = env.render()
+        gif.create_image(fig)
         action_mask = obs["action_mask"]
-        action = env.action_space.sample(action_mask)
+        action = env.action_space.sample(mask=action_mask)
         obs, reward, done, info = env.step(action)
         if done:
             break
 
-    fig = env.container.plot()
-    fig.show()
+    gif.create_gif()
+    gif.save_gif("random_rollout.gif")
