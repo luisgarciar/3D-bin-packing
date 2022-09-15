@@ -20,18 +20,16 @@ We follow the space representation depicted below, all coordinates and lengths o
 
 """
 import copy
-import warnings
 from typing import List, Tuple, Union
 
 import gym
 import numpy as np
 import plotly.graph_objects as go
-from gym.spaces import Discrete, MultiDiscrete, MultiBinary
+from gym.spaces import Discrete, MultiDiscrete
 from gym.utils import seeding
 from nptyping import NDArray
 
 from src.packing_kernel import Box, Container
-from src.utils import boxes_generator
 
 
 class PackingEnv(gym.Env):
@@ -77,14 +75,14 @@ class PackingEnv(gym.Env):
         To be defined
     """
 
-    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
+    metadata = {"render_modes": ["human", "rgb_array", None], "render_fps": 4}
 
     def __init__(
         self,
         container_size: List[int],
         box_sizes: List[List[int]],
         num_visible_boxes: int = 1,
-        render_mode: str = "human",
+        render_mode: str = None,
         options: dict = None,
     ) -> None:
         """Initialize the environment.
@@ -109,14 +107,12 @@ class PackingEnv(gym.Env):
 
         # The list of boxes that are not yet packed and not visible to the agent
         self.unpacked_hidden_boxes = self.initial_boxes.copy()
-        # The list of boxes that are not yet packed and are visible to the agent
-        self.unpacked_visible_boxes = []
         # The list of boxes that are already packed
         self.packed_boxes = []
         # The list of boxes that could not be packed (did not fit in the container)
         self.skipped_boxes = []
 
-        # The number and list of boxes that are visible to the agent.
+        # The number and list of boxes that are not yet packed and are visible to the agent
         self.num_visible_boxes = num_visible_boxes
         self.unpacked_visible_boxes = []
         self.state = {}
@@ -126,27 +122,46 @@ class PackingEnv(gym.Env):
         # The upper bound for the entries in MultiDiscrete space is not inclusive -- we add 1 to each coordinate
         box_repr = np.zeros(shape=(num_visible_boxes, 3), dtype=np.int32)
         box_repr[:] = self.container.size + [1, 1, 1]
+        # Reshape the list of sizes of the visible boxes to a 1D array
+        box_repr = np.reshape(box_repr, newshape=(num_visible_boxes * 3,))
+
         # Array to define the MultiDiscrete space with the height map of the container
         height_map_repr = np.ones(
             shape=(container_size[0], container_size[1]), dtype=np.int32
         ) * (container_size[2] + 1)
+        # Reshape the height map to a 1D array
+        height_map_repr = np.reshape(
+            height_map_repr, newshape=(container_size[0] * container_size[1],)
+        )
 
-        # The action mask is a Multibinary array with the same length as the number of positions
-        # in the container times the number of visible boxes
         # Dict to define the observation space
         observation_dict = {
             "height_map": MultiDiscrete(height_map_repr),
             "visible_box_sizes": MultiDiscrete(box_repr),
-            "action_mask": MultiBinary(
-                container_size[0] * container_size[1] * num_visible_boxes
-            ),
         }
+
+        # The action mask is a Multibinary array with the same length as the number of positions
+        # in the container times the number of visible boxes
+        # Removed action mask for now
+        # "action_mask": MultiBinary(
+        #    container_size[0] * container_size[1] * num_visible_boxes
+        # ),
 
         # Observation space
         self.observation_space = gym.spaces.Dict(observation_dict)
         # Action space
         self.action_space = Discrete(
             container_size[0] * container_size[1] * num_visible_boxes
+        )
+
+        # Set the initial action_mask to a zero array
+        self.action_mask = np.zeros(
+            shape=(
+                self.container.size[0]
+                * self.container.size[1]
+                * self.num_visible_boxes,
+            ),
+            dtype=np.int32,
         )
 
         # if num_visible_boxes > 1:
@@ -156,7 +171,6 @@ class PackingEnv(gym.Env):
         #         "position": MultiDiscrete([container_size[0], container_size[1]]),
         #     }
         #     self.action_space = gym.spaces.Dict(action_dict)
-        #
         # else:
 
     def seed(self, seed: int = 42):
@@ -227,13 +241,10 @@ class PackingEnv(gym.Env):
 
         # Reset the list of boxes visible to the agent and deletes them from the list of
         # hidden unpacked boxes to be packed
-        if self.num_visible_boxes > 1:
-            self.unpacked_visible_boxes = self.unpacked_hidden_boxes[
-                0 : self.num_visible_boxes
-            ]
-            del self.unpacked_hidden_boxes[0 : self.num_visible_boxes]
-        else:
-            self.unpacked_visible_boxes = [self.unpacked_hidden_boxes.pop(0)]
+        self.unpacked_visible_boxes = copy.deepcopy(
+            self.unpacked_hidden_boxes[0 : self.num_visible_boxes]
+        )
+        del self.unpacked_hidden_boxes[0 : self.num_visible_boxes]
 
         # Reset the list of boxes that are already packed
         self.packed_boxes = self.container.boxes
@@ -242,21 +253,23 @@ class PackingEnv(gym.Env):
         visible_box_sizes = np.asarray(
             [box.size for box in self.unpacked_visible_boxes]
         )
-        visible_box_sizes = np.reshape(visible_box_sizes, (self.num_visible_boxes, 3))
+
         # Reset the state of the environment
         hm = np.asarray(self.container.height_map, dtype=np.int32)
-        action_mask = np.asarray(
-            self.container.action_mask(box=self.unpacked_visible_boxes[0]),
-            dtype=np.int8,
-        )
+        hm = np.reshape(hm, (self.container.size[0] * self.container.size[1],))
 
-        self.state = {
-            "height_map": hm,
-            "visible_box_sizes": visible_box_sizes,
-            "action_mask": np.reshape(
-                action_mask, (self.container.size[0] * self.container.size[1],)
-            ),
-        }
+        # Set the initial blank action_mask
+        self.action_mask = self.get_action_mask
+
+        # Removed action mask from the observation space for now
+        # action_mask = np.asarray(
+        # self.container.action_mask(box=self.unpacked_visible_boxes[0]), dtype=np.int8, )
+        # "action_mask": np.reshape(
+        # action_mask, (self.container.size[0] * self.container.size[1],)
+
+        vbs = np.reshape(visible_box_sizes, (self.num_visible_boxes * 3,))
+        self.state = {"height_map": hm, "visible_box_sizes": vbs}
+
         self.done = False
         self.seed(seed)
 
@@ -296,15 +309,18 @@ class PackingEnv(gym.Env):
             else:
                 self.container.place_box(self.unpacked_visible_boxes[0], position)
                 self.unpacked_visible_boxes = []
-            # Update the list of packed boxes
-            self.state["height_map"] = self.container.height_map
+            # Update the height map, reshapes it and adds it to the observation space
+            self.state["height_map"] = np.reshape(
+                self.container.height_map,
+                (self.container.size[0] * self.container.size[1],),
+            )
             # Update the list of packed boxes
             self.packed_boxes = self.container.boxes
             # set reward
             reward = 1
             # self.reward = self.container.compute_reward()
 
-        # If the action is not valid, remove the box and add it to skipped boxes
+            # If the action is not valid, remove the box and add it to skipped boxes
         else:
             self.skipped_boxes.append(self.unpacked_visible_boxes.pop(box_index))
             reward = 0
@@ -318,54 +334,88 @@ class PackingEnv(gym.Env):
             self.done = True
             terminated = self.done
             self.state["visible_box_sizes"] = []
-            # TO DO: add info, return info
+        # TO DO: add info, return info
         else:
             visible_box_sizes = np.asarray(
                 [box.size for box in self.unpacked_visible_boxes]
             )
-            visible_box_sizes = np.reshape(
-                visible_box_sizes, (self.num_visible_boxes, 3)
-            )
+            visible_box_sizes = visible_box_sizes.flatten()
             # Update the state of the environment
             self.state["visible_box_sizes"] = visible_box_sizes
-            # Update the action mask
-            self.state["action_mask"] = np.reshape(
-                self.container.action_mask(box=self.unpacked_visible_boxes[0]),
-                (self.container.size[0] * self.container.size[1],),
-            )
-
             terminated = False
+
+        # Removed action mask for now
+        # Update the action mask
+        #    self.state["action_mask"] = np.reshape(
+        #    self.container.action_mask(box=self.unpacked_visible_boxes[0]),
+        #    (self.container.size[0] * self.container.size[1],),
+        # )
 
         return self.state, reward, terminated, {}
 
-    def compute_reward(self) -> float:
-        """Compute the reward for the action.
-        Returns:
+    @property
+    def get_action_mask(self):
+        """Get the action mask from the env.
+          Parameters
+        Returns
         ----------
-            reward: Reward for the action.
-        """
-        pass
+            np.ndarray: Array with the action mask."""
+        act_mask = np.zeros(
+            shape=(
+                self.num_visible_boxes,
+                self.container.size[0] * self.container.size[1],
+            ),
+            dtype=np.int8,
+        )
 
-    def render(self, mode="human") -> Union[go.Figure, NDArray]:
-        """Render the environment.
-        Args:
-            mode: Mode to render the environment.
-        """
-        if mode == "human":
-            return self.container.plot()
+        for index in range(len(self.unpacked_visible_boxes)):
+            acm = self.container.action_mask(
+                box=self.unpacked_visible_boxes[index], check_area=100
+            )
+            act_mask[index] = np.reshape(
+                acm, (self.container.size[0] * self.container.size[1],)
+            )
+        return act_mask.flatten()
 
-        elif mode == "rgb_array":
-            import io
-            from PIL import Image
 
-            fig_png = self.container.plot().to_image(format="png")
-            buf = io.BytesIO(fig_png)
-            img = Image.open(buf)
-            return np.asarray(img, dtype=np.int8)
+def render(self, mode=None) -> Union[go.Figure, NDArray]:
+    """Render the environment.
+    Args:
+        mode: Mode to render the environment.
+    """
+    if mode is None:
+        return None
 
-    def close(self) -> None:
-        """Close the environment."""
-        pass
+    elif mode == "human":
+        fig = self.container.plot()
+        fig.show()
+        return None
+
+    elif mode == "rgb_array":
+        import io
+        from PIL import Image
+
+        fig_png = self.container.plot().to_image(format="png")
+        buf = io.BytesIO(fig_png)
+        img = Image.open(buf)
+        return np.asarray(img, dtype=np.int8)
+
+    else:
+        raise NotImplementedError
+
+
+def compute_reward(self) -> float:
+    """Compute the reward for the action.
+    Returns:
+    ----------
+        reward: Reward for the action.
+    """
+    pass
+
+
+def close(self) -> None:
+    """Close the environment."""
+    pass
 
 
 if __name__ == "__main__":
