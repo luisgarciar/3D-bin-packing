@@ -20,7 +20,7 @@ We follow the space representation depicted below, all coordinates and lengths o
 
 """
 import copy
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Dict
 
 import gym
 import numpy as np
@@ -220,7 +220,7 @@ class PackingEnv(gym.Env):
         )
         return action
 
-    def reset(self, seed=None, options=None, return_info=False) -> dict[str, object]:
+    def reset(self, seed=None, options=None, return_info=False) -> Dict:
         """Reset the environment.
         Parameters
         ----------
@@ -301,7 +301,7 @@ class PackingEnv(gym.Env):
             )
             == 1
         ):
-            # Place the box in the container and delete it from the list of unpacked boxes that are visible to the agent
+            # Place the box in the container and delete it from the list of unpacked visible boxes
             if self.num_visible_boxes > 1:
                 self.container.place_box(
                     self.unpacked_visible_boxes.pop(box_index), position
@@ -318,7 +318,6 @@ class PackingEnv(gym.Env):
             self.packed_boxes = self.container.boxes
             # set reward
             reward = 1
-            # self.reward = self.container.compute_reward()
 
             # If the action is not valid, remove the box and add it to skipped boxes
         else:

@@ -5,9 +5,12 @@ import pytest
 from gym import make
 from gym.utils.env_checker import check_env
 from numpy.testing import assert_array_equal
-
 from src.packing_env import PackingEnv
 from src.utils import boxes_generator
+import warnings
+
+# Ignore plotly and gym deprecation warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 num_rd_tests = 3
 num_items = rd.sample(range(50, 81), num_rd_tests)

@@ -5,6 +5,11 @@ import pytest
 
 from src.packing_kernel import Box, Container
 
+import warnings
+
+# Ignore plotly and gym deprecation warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 rd.seed(42)
 num_rd_tests = 5
 num_items0 = rd.sample(range(50, 81), num_rd_tests)

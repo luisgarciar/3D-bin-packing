@@ -25,7 +25,7 @@ env = make(
     "PackingEnv-v0",
     container_size=container_size,
     box_sizes=box_sizes2,
-    num_visible_boxes=1,
+    num_visible_boxes=3,
     render_mode=None,
     options=None,
 )
@@ -35,6 +35,6 @@ obs = env.reset()
 # To configure the Maskable PPO agent, we need to wrap the environment
 env = ActionMasker(env, mask_fn)  # Wrap to enable masking
 model = MaskablePPO("MultiInputPolicy", env, gamma=0.4, verbose=1)
-model.learn(2)
+model.learn(5)
 print("done training")
 model.save("ppo_mask")
