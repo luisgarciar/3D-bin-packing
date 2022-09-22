@@ -278,6 +278,18 @@ class PackingEnv(gym.Env):
         else:
             return self.state
 
+    def compute_reward(self) -> float:
+        """Compute the reward for the action.
+        Returns:
+        ----------
+            reward: Reward for the action.
+        """
+        # Volume of packed boxes
+        packed_volume = np.sum([box.volume for box in self.packed_boxes])
+        container_volume = self.container.volume
+        reward = packed_volume / container_volume
+        return reward
+
     def step(self, action: int) -> Tuple[NDArray, float, bool, dict]:
         """Step the environment.
         Parameters:
@@ -415,19 +427,6 @@ def render(self, mode=None) -> Union[go.Figure, NDArray]:
 
     else:
         raise NotImplementedError
-
-
-def compute_reward(self) -> float:
-    """Compute the reward for the action.
-    Returns:
-    ----------
-        reward: Reward for the action.
-    """
-    # Volume of packed boxes
-    packed_volume = np.sum([box.volume for box in self.packed_boxes])
-    container_volume = self.container.volume
-    reward = packed_volume / container_volume
-    return reward
 
 
 def close(self) -> None:
