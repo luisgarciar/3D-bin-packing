@@ -336,7 +336,7 @@ class PackingEnv(gym.Env):
         if len(self.unpacked_visible_boxes) == 0:
             self.done = True
             terminated = self.done
-            reward = self.compute_reward()
+            reward = compute_reward()
             self.state["visible_box_sizes"] = []
             return self.state, reward, terminated, {}
         # TO DO: add info, return info
