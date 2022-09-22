@@ -62,17 +62,16 @@ class PackingEnv(gym.Env):
         is placed in the position (x,y) = (j//container.size[1], j%container.size[1]) in the container.
 
         Reward:
-        To be defined
+        At the end of the episode a reward is given to the agent, the reward equals the ratio between the volume
+        of the packed boxes and the volume of the container.
 
         Starting State:
         height_map is initialized as a zero array and the list of upcoming boxes is initialized as a random list of
         length num_visible_boxes from the complete list of boxes.
 
         Episode Termination:
-        The episode is terminated when all the boxes are placed in the container or when the container is full.
-
-        Episode Reward:
-        To be defined
+        The episode is terminated when all the boxes are placed in the container or when no more boxes can be packed
+        in the container.
     """
 
     metadata = {"render_modes": ["human", "rgb_array", None], "render_fps": 4}
@@ -100,6 +99,7 @@ class PackingEnv(gym.Env):
         assert num_visible_boxes <= len(box_sizes)
         self.container = Container(container_size)
         # The initial list of all boxes that should be placed in the container.
+
         self.initial_boxes = [
             Box(box_size, position=[-1, -1, -1], id_=index)
             for index, box_size in enumerate(box_sizes)
@@ -293,7 +293,11 @@ class PackingEnv(gym.Env):
 
         # Get the index and position of the box to be placed in the container
         box_index, position = self.action_to_position(action)
-        # Check if the action is valid
+        # if the box is a dummy box, skip the step
+        if box_index >= len(self.unpacked_visible_boxes):
+            return self.state, 0, self.done, {}
+
+        # If it is not a dummy box, check if the action is valid
         # TO DO: add parameter check area, add info, return info
         if (
             self.container.check_valid_box_placement(
@@ -317,7 +321,7 @@ class PackingEnv(gym.Env):
             # Update the list of packed boxes
             self.packed_boxes = self.container.boxes
             # set reward
-            reward = 1
+            reward = 0
 
             # If the action is not valid, remove the box and add it to skipped boxes
         else:
@@ -332,25 +336,35 @@ class PackingEnv(gym.Env):
         if len(self.unpacked_visible_boxes) == 0:
             self.done = True
             terminated = self.done
+            reward = self.compute_reward()
             self.state["visible_box_sizes"] = []
+            return self.state, reward, terminated, {}
         # TO DO: add info, return info
-        else:
+
+        if len(self.unpacked_visible_boxes) == self.num_visible_boxes:
+            # Update the list of visible box sizes in the observation space
             visible_box_sizes = np.asarray(
                 [box.size for box in self.unpacked_visible_boxes]
             )
-            visible_box_sizes = visible_box_sizes.flatten()
-            # Update the state of the environment
-            self.state["visible_box_sizes"] = visible_box_sizes
+            self.state["visible_box_sizes"] = np.reshape(
+                visible_box_sizes, (self.num_visible_boxes * 3,)
+            )
             terminated = False
+            return self.state, reward, terminated, {}
 
-        # Removed action mask for now
-        # Update the action mask
-        #    self.state["action_mask"] = np.reshape(
-        #    self.container.action_mask(box=self.unpacked_visible_boxes[0]),
-        #    (self.container.size[0] * self.container.size[1],),
-        # )
-
-        return self.state, reward, terminated, {}
+        if len(self.unpacked_visible_boxes) < self.num_visible_boxes:
+            # If there are fewer boxes than the maximum number of visible boxes, add dummy boxes
+            dummy_box_size = self.container.size
+            num_dummy_boxes = self.num_visible_boxes - len(self.unpacked_visible_boxes)
+            box_size_list = [box.size for box in self.unpacked_visible_boxes] + [
+                dummy_box_size
+            ] * num_dummy_boxes
+            visible_box_sizes = np.asarray(box_size_list)
+            self.state["visible_box_sizes"] = np.reshape(
+                visible_box_sizes, (self.num_visible_boxes * 3,)
+            )
+            terminated = False
+            return self.state, reward, terminated, {}
 
     @property
     def get_action_mask(self):
@@ -409,7 +423,11 @@ def compute_reward(self) -> float:
     ----------
         reward: Reward for the action.
     """
-    pass
+    # Volume of packed boxes
+    packed_volume = np.sum([box.volume for box in self.packed_boxes])
+    container_volume = self.container.volume
+    reward = packed_volume / container_volume
+    return reward
 
 
 def close(self) -> None:
