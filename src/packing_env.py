@@ -30,6 +30,7 @@ from gym.utils import seeding
 from nptyping import NDArray
 
 from src.packing_kernel import Box, Container
+from src.utils import boxes_generator
 
 
 class PackingEnv(gym.Env):
@@ -74,15 +75,17 @@ class PackingEnv(gym.Env):
         in the container.
     """
 
-    metadata = {"render_modes": ["human", "rgb_array", None], "render_fps": 4}
+    metadata = {"render_modes": ["human", "rgb_array", "None"], "render_fps": 4}
 
     def __init__(
         self,
         container_size: List[int],
         box_sizes: List[List[int]],
         num_visible_boxes: int = 1,
-        render_mode: str = None,
+        render_mode: str = "None",
         options: dict = None,
+        random_boxes: bool = False,
+        only_terminal_reward: bool = True,
     ) -> None:
         """Initialize the environment.
 
@@ -95,6 +98,11 @@ class PackingEnv(gym.Env):
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
 
+        # This flag determines if the boxes are randomly generated everytime the environment is reset
+        self.random_boxes = random_boxes
+        # This flag determines if the reward is only given at the end of the episode
+        self.only_terminal_reward = only_terminal_reward
+
         # TO DO: Add parameter check box area
         assert num_visible_boxes <= len(box_sizes)
         self.container = Container(container_size)
@@ -104,6 +112,8 @@ class PackingEnv(gym.Env):
             Box(box_size, position=[-1, -1, -1], id_=index)
             for index, box_size in enumerate(box_sizes)
         ]
+
+        self.num_initial_boxes = len(self.initial_boxes)
 
         # The list of boxes that are not yet packed and not visible to the agent
         self.unpacked_hidden_boxes = self.initial_boxes.copy()
@@ -236,6 +246,12 @@ class PackingEnv(gym.Env):
             info = {}
 
         self.container.reset()
+
+        if self.random_boxes:
+            self.initial_boxes = boxes_generator(
+                self.container.size, num_items=self.num_initial_boxes
+            )
+
         # Reset the list of boxes that are not yet packed and not visible to the agent
         self.unpacked_hidden_boxes = copy.deepcopy(self.initial_boxes)
 
@@ -278,7 +294,7 @@ class PackingEnv(gym.Env):
         else:
             return self.state
 
-    def compute_reward(self) -> float:
+    def compute_reward(self, reward_type: str = "terminal_step") -> float:
         """Compute the reward for the action.
         Returns:
         ----------
@@ -286,8 +302,26 @@ class PackingEnv(gym.Env):
         """
         # Volume of packed boxes
         packed_volume = np.sum([box.volume for box in self.packed_boxes])
-        container_volume = self.container.volume
-        reward = packed_volume / container_volume
+
+        if reward_type == "terminal_step":
+            # Reward for the terminal step
+            container_volume = self.container.volume
+            reward = packed_volume / container_volume
+        elif reward_type == "interm_step":
+            min_x = min([box.position[0] for box in self.packed_boxes])
+            min_y = min([box.position[1] for box in self.packed_boxes])
+            min_z = min([box.position[2] for box in self.packed_boxes])
+            max_x = max([box.position[0] + box.size[0] for box in self.packed_boxes])
+            max_y = max([box.position[1] + box.size[1] for box in self.packed_boxes])
+            max_z = max([box.position[2] + box.size[2] for box in self.packed_boxes])
+
+            # Reward for the intermediate step
+            reward = packed_volume / (
+                (max_x - min_x) * (max_y - min_y) * (max_z - min_z)
+            )
+        else:
+            raise ValueError("Invalid reward type")
+
         return reward
 
     def step(self, action: int) -> Tuple[NDArray, float, bool, dict]:
@@ -333,7 +367,10 @@ class PackingEnv(gym.Env):
             # Update the list of packed boxes
             self.packed_boxes = self.container.boxes
             # set reward
-            reward = 0
+            if self.only_terminal_reward:
+                reward = 0
+            else:
+                reward = self.compute_reward(reward_type="interm_step")
 
             # If the action is not valid, remove the box and add it to skipped boxes
         else:
@@ -348,7 +385,7 @@ class PackingEnv(gym.Env):
         if len(self.unpacked_visible_boxes) == 0:
             self.done = True
             terminated = self.done
-            reward = self.compute_reward()
+            reward = self.compute_reward(reward_type="terminal_step")
             self.state["visible_box_sizes"] = []
             return self.state, reward, terminated, {}
         # TO DO: add info, return info
@@ -413,8 +450,8 @@ def render(self, mode=None) -> Union[go.Figure, NDArray]:
 
     elif mode == "human":
         fig = self.container.plot()
-        fig.show()
-        return None
+        # fig.show()
+        return fig
 
     elif mode == "rgb_array":
         import io
