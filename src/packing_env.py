@@ -248,9 +248,13 @@ class PackingEnv(gym.Env):
         self.container.reset()
 
         if self.random_boxes:
-            self.initial_boxes = boxes_generator(
+            box_sizes = boxes_generator(
                 self.container.size, num_items=self.num_initial_boxes
             )
+            self.initial_boxes = [
+                Box(box_size, position=[-1, -1, -1], id_=index)
+                for index, box_size in enumerate(box_sizes)
+            ]
 
         # Reset the list of boxes that are not yet packed and not visible to the agent
         self.unpacked_hidden_boxes = copy.deepcopy(self.initial_boxes)
