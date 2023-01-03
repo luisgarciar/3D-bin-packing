@@ -2,8 +2,6 @@
 
 Repository for the Capstone Project 3D Packing Optimization of the [Fourthbrain Machine Learning Engineer program](https://www.fourthbrain.ai/machine-learning-engineer).
 
-Group Members: Luis García Ramos, Przemyslaw Sekula
-
 This repository contains an environment compatible with [OpenAI Gym's API](https://github.com/openai/gym) to solve the 
 3D bin packing problem with reinforcement learning (RL).
 
