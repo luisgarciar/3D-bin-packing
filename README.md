@@ -24,6 +24,25 @@ algorithm described in [Ranked Reward: Enabling Self-Play Reinforcement Learning
 The documentation for this project is located in the `doc` folder, with a complete description of the state and 
 action space as well as the rewards to be used for RL training.
 
+## Installation instructions
+We recommend that you create a virtual environment with Python 3.8 (for example, using conda environments). 
+In your terminal window, activate your environment and clone the repository:
+``` 
+git clone https://github.com/luisgarciar/3D-bin-packing.git
+```
+
+To run the code, you need to install a few dependencies. The package stable-baselines3 is used for RL training,
+we require a custom version to avoid compatibility issues with other packages (sb3-contrib and gym). To install it 
+To install it, run the following command:
+```
+pip install git+https://github.com/carlosluis/stable-baselines3@fix_tests
+```
+Then, go to the cloned directory and install the remaining dependencies:
+```
+cd 3D-bin-packing
+pip install -r requirements.txt
+```
+
 ## Packing engine
 The module `packing_engine` (located in `src/packing_engine.py`) implements the `Container` and `Box` objects that are 
 used in the Gym environment. To add custom features (for example, to allow rotations), see the documentation of this module.
