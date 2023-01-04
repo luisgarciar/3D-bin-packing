@@ -230,7 +230,7 @@ class PackingEnv(gym.Env):
         )
         return action
 
-    def reset(self, seed=None, options=None, return_info=False) -> Dict:
+    def reset(self, seed=None, options=None) -> Dict:
         """Reset the environment.
         Parameters
         ----------
@@ -240,10 +240,8 @@ class PackingEnv(gym.Env):
                 Options for the environment.
         Returns
         ----------
-            dict: Dictionary with the observation of the environment.
+            obs, info: Tuple with the initial state and a dictionary with information of the environment.
         """
-        if return_info:
-            info = {}
 
         self.container.reset()
 
@@ -292,11 +290,9 @@ class PackingEnv(gym.Env):
 
         self.done = False
         self.seed(seed)
+        info = {}
 
-        if return_info:
-            return self.state, info
-        else:
-            return self.state
+        return self.state, info
 
     def compute_reward(self, reward_type: str = "terminal_step") -> float:
         """Compute the reward for the action.
