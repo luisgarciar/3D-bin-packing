@@ -29,9 +29,9 @@ In your terminal window, activate your environment and clone the repository:
 git clone https://github.com/luisgarciar/3D-bin-packing.git
 ```
 
-To run the code, you need to install a few dependencies. The package stable-baselines3 is used for RL training,
-we require a custom version to avoid compatibility issues with other packages (sb3-contrib and gym). To install it 
-To install it, run the following command:
+To run the code, you need to install a few dependencies. The package sb3-contrib is used for RL training, which requires
+a special version of stable-baselines3 to avoid compatibility issues with other packages. To install the custom version
+of stable-baselines3, run the following command:
 ```
 pip install git+https://github.com/carlosluis/stable-baselines3@fix_tests
 ```
@@ -68,3 +68,8 @@ The following updates have been made to the repository:
 - Added a demo notebook for the random policy.
 - Updated the requirements.txt file with the required packages.
 - Added a demo script for training agents with Maskable PPO. 
+
+## Update: 7/1/2023 
+The following updates have been made to the repository:
+- Updated the demo notebook for training agents with Maskable PPO in Google colab.
+- Fixed issues with the tests.
