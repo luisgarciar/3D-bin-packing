@@ -149,15 +149,15 @@ def cuboids_intersection(cuboid_a: List[int], cuboid_b: List[int]) -> bool:
     ), "cuboid_a must have nonnegative coordinates"
     assert np.all(
         np.less_equal([0, 0, 0], cuboid_b[:3])
-    ), "cuboid_b must have nonnegative coordinates"
+    ), "cuboid_b must have non-negative coordinates"
 
     assert np.all(
         np.less(cuboid_a[:3], cuboid_a[3:])
-    ), "cuboid_a must have nonzero volume"
+    ), "cuboid_a must have non-zero volume"
 
     assert np.all(
         np.less(cuboid_b[:3], cuboid_b[3:])
-    ), "cuboid_b must have nonzero volume"
+    ), "cuboid_b must have non-zero volume"
 
     inter = [
         interval_intersection([cuboid_a[0], cuboid_a[3]], [cuboid_b[0], cuboid_b[3]]),
@@ -192,18 +192,18 @@ def cuboid_fits(cuboid_a: List[int], cuboid_b: List[int]) -> bool:
     # Check the coordinates of the back-bottom-left vertex of the first cuboid
     assert np.all(
         np.less_equal([0, 0, 0], cuboid_a[:3])
-    ), "cuboid_a must have nonnegative coordinates"
+    ), "cuboid_a must have non-negative coordinates"
     assert np.all(
         np.less_equal([0, 0, 0], cuboid_b[:3])
-    ), "cuboid_b must have nonnegative coordinates"
+    ), "cuboid_b must have non-negative coordinates"
 
     assert np.all(
         np.less(cuboid_a[:3], cuboid_a[3:])
-    ), "cuboid_a must have nonzero volume"
+    ), "cuboid_a must have non-zero volume"
 
     assert np.all(
         np.less(cuboid_b[:3], cuboid_b[3:])
-    ), "cuboid_b must have nonzero volume"
+    ), "cuboid_b must have non-zero volume"
 
     # Check if the cuboid b fits into the cuboid a
     return np.all(np.less_equal(cuboid_a[:3], cuboid_b[:3])) and np.all(

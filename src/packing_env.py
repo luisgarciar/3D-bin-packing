@@ -20,13 +20,12 @@ We follow the space representation depicted below, all coordinates and lengths o
 
 """
 import copy
-import warnings
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Dict
 
 import gym
 import numpy as np
 import plotly.graph_objects as go
-from gym.spaces import Discrete, MultiDiscrete, MultiBinary
+from gym.spaces import Discrete, MultiDiscrete
 from gym.utils import seeding
 from nptyping import NDArray
 
@@ -64,28 +63,29 @@ class PackingEnv(gym.Env):
         is placed in the position (x,y) = (j//container.size[1], j%container.size[1]) in the container.
 
         Reward:
-        To be defined
+        At the end of the episode a reward is given to the agent, the reward equals the ratio between the volume
+        of the packed boxes and the volume of the container.
 
         Starting State:
         height_map is initialized as a zero array and the list of upcoming boxes is initialized as a random list of
         length num_visible_boxes from the complete list of boxes.
 
         Episode Termination:
-        The episode is terminated when all the boxes are placed in the container or when the container is full.
-
-        Episode Reward:
-        To be defined
+        The episode is terminated when all the boxes are placed in the container or when no more boxes can be packed
+        in the container.
     """
 
-    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
+    metadata = {"render_modes": ["human", "rgb_array", "None"], "render_fps": 4}
 
     def __init__(
         self,
         container_size: List[int],
         box_sizes: List[List[int]],
         num_visible_boxes: int = 1,
-        render_mode: str = "human",
+        render_mode: str = "None",
         options: dict = None,
+        random_boxes: bool = False,
+        only_terminal_reward: bool = True,
     ) -> None:
         """Initialize the environment.
 
@@ -98,25 +98,31 @@ class PackingEnv(gym.Env):
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
 
+        # This flag determines if the boxes are randomly generated everytime the environment is reset
+        self.random_boxes = random_boxes
+        # This flag determines if the reward is only given at the end of the episode
+        self.only_terminal_reward = only_terminal_reward
+
         # TO DO: Add parameter check box area
         assert num_visible_boxes <= len(box_sizes)
         self.container = Container(container_size)
         # The initial list of all boxes that should be placed in the container.
+
         self.initial_boxes = [
             Box(box_size, position=[-1, -1, -1], id_=index)
             for index, box_size in enumerate(box_sizes)
         ]
 
+        self.num_initial_boxes = len(self.initial_boxes)
+
         # The list of boxes that are not yet packed and not visible to the agent
         self.unpacked_hidden_boxes = self.initial_boxes.copy()
-        # The list of boxes that are not yet packed and are visible to the agent
-        self.unpacked_visible_boxes = []
         # The list of boxes that are already packed
         self.packed_boxes = []
         # The list of boxes that could not be packed (did not fit in the container)
         self.skipped_boxes = []
 
-        # The number and list of boxes that are visible to the agent.
+        # The number and list of boxes that are not yet packed and are visible to the agent
         self.num_visible_boxes = num_visible_boxes
         self.unpacked_visible_boxes = []
         self.state = {}
@@ -126,27 +132,46 @@ class PackingEnv(gym.Env):
         # The upper bound for the entries in MultiDiscrete space is not inclusive -- we add 1 to each coordinate
         box_repr = np.zeros(shape=(num_visible_boxes, 3), dtype=np.int32)
         box_repr[:] = self.container.size + [1, 1, 1]
+        # Reshape the list of sizes of the visible boxes to a 1D array
+        box_repr = np.reshape(box_repr, newshape=(num_visible_boxes * 3,))
+
         # Array to define the MultiDiscrete space with the height map of the container
         height_map_repr = np.ones(
             shape=(container_size[0], container_size[1]), dtype=np.int32
         ) * (container_size[2] + 1)
+        # Reshape the height map to a 1D array
+        height_map_repr = np.reshape(
+            height_map_repr, newshape=(container_size[0] * container_size[1],)
+        )
 
-        # The action mask is a Multibinary array with the same length as the number of positions
-        # in the container times the number of visible boxes
         # Dict to define the observation space
         observation_dict = {
             "height_map": MultiDiscrete(height_map_repr),
             "visible_box_sizes": MultiDiscrete(box_repr),
-            "action_mask": MultiBinary(
-                container_size[0] * container_size[1] * num_visible_boxes
-            ),
         }
+
+        # The action mask is a Multibinary array with the same length as the number of positions
+        # in the container times the number of visible boxes
+        # Removed action mask for now
+        # "action_mask": MultiBinary(
+        #    container_size[0] * container_size[1] * num_visible_boxes
+        # ),
 
         # Observation space
         self.observation_space = gym.spaces.Dict(observation_dict)
         # Action space
         self.action_space = Discrete(
             container_size[0] * container_size[1] * num_visible_boxes
+        )
+
+        # Set the initial action_mask to a zero array
+        self.action_mask = np.zeros(
+            shape=(
+                self.container.size[0]
+                * self.container.size[1]
+                * self.num_visible_boxes,
+            ),
+            dtype=np.int32,
         )
 
         # if num_visible_boxes > 1:
@@ -156,7 +181,6 @@ class PackingEnv(gym.Env):
         #         "position": MultiDiscrete([container_size[0], container_size[1]]),
         #     }
         #     self.action_space = gym.spaces.Dict(action_dict)
-        #
         # else:
 
     def seed(self, seed: int = 42):
@@ -206,7 +230,7 @@ class PackingEnv(gym.Env):
         )
         return action
 
-    def reset(self, seed=None, options=None, return_info=False) -> dict[str, object]:
+    def reset(self, seed=None, options=None) -> Dict:
         """Reset the environment.
         Parameters
         ----------
@@ -216,24 +240,29 @@ class PackingEnv(gym.Env):
                 Options for the environment.
         Returns
         ----------
-            dict: Dictionary with the observation of the environment.
+            obs, info: Tuple with the initial state and a dictionary with information of the environment.
         """
-        if return_info:
-            info = {}
 
         self.container.reset()
+
+        if self.random_boxes:
+            box_sizes = boxes_generator(
+                self.container.size, num_items=self.num_initial_boxes
+            )
+            self.initial_boxes = [
+                Box(box_size, position=[-1, -1, -1], id_=index)
+                for index, box_size in enumerate(box_sizes)
+            ]
+
         # Reset the list of boxes that are not yet packed and not visible to the agent
         self.unpacked_hidden_boxes = copy.deepcopy(self.initial_boxes)
 
         # Reset the list of boxes visible to the agent and deletes them from the list of
         # hidden unpacked boxes to be packed
-        if self.num_visible_boxes > 1:
-            self.unpacked_visible_boxes = self.unpacked_hidden_boxes[
-                0 : self.num_visible_boxes
-            ]
-            del self.unpacked_hidden_boxes[0 : self.num_visible_boxes]
-        else:
-            self.unpacked_visible_boxes = [self.unpacked_hidden_boxes.pop(0)]
+        self.unpacked_visible_boxes = copy.deepcopy(
+            self.unpacked_hidden_boxes[0 : self.num_visible_boxes]
+        )
+        del self.unpacked_hidden_boxes[0 : self.num_visible_boxes]
 
         # Reset the list of boxes that are already packed
         self.packed_boxes = self.container.boxes
@@ -242,28 +271,58 @@ class PackingEnv(gym.Env):
         visible_box_sizes = np.asarray(
             [box.size for box in self.unpacked_visible_boxes]
         )
-        visible_box_sizes = np.reshape(visible_box_sizes, (self.num_visible_boxes, 3))
+
         # Reset the state of the environment
         hm = np.asarray(self.container.height_map, dtype=np.int32)
-        action_mask = np.asarray(
-            self.container.action_mask(box=self.unpacked_visible_boxes[0]),
-            dtype=np.int8,
-        )
+        hm = np.reshape(hm, (self.container.size[0] * self.container.size[1],))
 
-        self.state = {
-            "height_map": hm,
-            "visible_box_sizes": visible_box_sizes,
-            "action_mask": np.reshape(
-                action_mask, (self.container.size[0] * self.container.size[1],)
-            ),
-        }
+        # Set the initial blank action_mask
+        self.action_mask = self.get_action_mask
+
+        # Removed action mask from the observation space for now
+        # action_mask = np.asarray(
+        # self.container.action_mask(box=self.unpacked_visible_boxes[0]), dtype=np.int8, )
+        # "action_mask": np.reshape(
+        # action_mask, (self.container.size[0] * self.container.size[1],)
+
+        vbs = np.reshape(visible_box_sizes, (self.num_visible_boxes * 3,))
+        self.state = {"height_map": hm, "visible_box_sizes": vbs}
+
         self.done = False
         self.seed(seed)
+        info = {}
 
-        if return_info:
-            return self.state, info
+        return self.state, info
+
+    def compute_reward(self, reward_type: str = "terminal_step") -> float:
+        """Compute the reward for the action.
+        Returns:
+        ----------
+            reward: Reward for the action.
+        """
+        # Volume of packed boxes
+        packed_volume = np.sum([box.volume for box in self.packed_boxes])
+
+        if reward_type == "terminal_step":
+            # Reward for the terminal step
+            container_volume = self.container.volume
+            reward = packed_volume / container_volume
+        elif reward_type == "interm_step":
+            min_x = min([box.position[0] for box in self.packed_boxes])
+            min_y = min([box.position[1] for box in self.packed_boxes])
+            min_z = min([box.position[2] for box in self.packed_boxes])
+            max_x = max([box.position[0] + box.size[0] for box in self.packed_boxes])
+            max_y = max([box.position[1] + box.size[1] for box in self.packed_boxes])
+            max_z = max([box.position[2] + box.size[2] for box in self.packed_boxes])
+
+            # Reward for the intermediate step
+            reward = packed_volume / (
+                (max_x - min_x) * (max_y - min_y) * (max_z - min_z)
+            )
         else:
-            return self.state
+            raise ValueError("Invalid reward type")
+
+        return reward
 
     def step(self, action: int) -> Tuple[NDArray, float, bool, dict]:
         """Step the environment.
@@ -280,7 +339,11 @@ class PackingEnv(gym.Env):
 
         # Get the index and position of the box to be placed in the container
         box_index, position = self.action_to_position(action)
-        # Check if the action is valid
+        # if the box is a dummy box, skip the step
+        if box_index >= len(self.unpacked_visible_boxes):
+            return self.state, 0, self.done, {}
+
+        # If it is not a dummy box, check if the action is valid
         # TO DO: add parameter check area, add info, return info
         if (
             self.container.check_valid_box_placement(
@@ -288,7 +351,7 @@ class PackingEnv(gym.Env):
             )
             == 1
         ):
-            # Place the box in the container and delete it from the list of unpacked boxes that are visible to the agent
+            # Place the box in the container and delete it from the list of unpacked visible boxes
             if self.num_visible_boxes > 1:
                 self.container.place_box(
                     self.unpacked_visible_boxes.pop(box_index), position
@@ -296,15 +359,20 @@ class PackingEnv(gym.Env):
             else:
                 self.container.place_box(self.unpacked_visible_boxes[0], position)
                 self.unpacked_visible_boxes = []
-            # Update the list of packed boxes
-            self.state["height_map"] = self.container.height_map
+            # Update the height map, reshapes it and adds it to the observation space
+            self.state["height_map"] = np.reshape(
+                self.container.height_map,
+                (self.container.size[0] * self.container.size[1],),
+            )
             # Update the list of packed boxes
             self.packed_boxes = self.container.boxes
             # set reward
-            reward = 1
-            # self.reward = self.container.compute_reward()
+            if self.only_terminal_reward:
+                reward = 0
+            else:
+                reward = self.compute_reward(reward_type="interm_step")
 
-        # If the action is not valid, remove the box and add it to skipped boxes
+            # If the action is not valid, remove the box and add it to skipped boxes
         else:
             self.skipped_boxes.append(self.unpacked_visible_boxes.pop(box_index))
             reward = 0
@@ -317,55 +385,90 @@ class PackingEnv(gym.Env):
         if len(self.unpacked_visible_boxes) == 0:
             self.done = True
             terminated = self.done
+            reward = self.compute_reward(reward_type="terminal_step")
             self.state["visible_box_sizes"] = []
-            # TO DO: add info, return info
-        else:
+            return self.state, reward, terminated, {}
+        # TO DO: add info, return info
+
+        if len(self.unpacked_visible_boxes) == self.num_visible_boxes:
+            # Update the list of visible box sizes in the observation space
             visible_box_sizes = np.asarray(
                 [box.size for box in self.unpacked_visible_boxes]
             )
-            visible_box_sizes = np.reshape(
-                visible_box_sizes, (self.num_visible_boxes, 3)
+            self.state["visible_box_sizes"] = np.reshape(
+                visible_box_sizes, (self.num_visible_boxes * 3,)
             )
-            # Update the state of the environment
-            self.state["visible_box_sizes"] = visible_box_sizes
-            # Update the action mask
-            self.state["action_mask"] = np.reshape(
-                self.container.action_mask(box=self.unpacked_visible_boxes[0]),
-                (self.container.size[0] * self.container.size[1],),
-            )
-
             terminated = False
+            return self.state, reward, terminated, {}
 
-        return self.state, reward, terminated, {}
+        if len(self.unpacked_visible_boxes) < self.num_visible_boxes:
+            # If there are fewer boxes than the maximum number of visible boxes, add dummy boxes
+            dummy_box_size = self.container.size
+            num_dummy_boxes = self.num_visible_boxes - len(self.unpacked_visible_boxes)
+            box_size_list = [box.size for box in self.unpacked_visible_boxes] + [
+                dummy_box_size
+            ] * num_dummy_boxes
+            visible_box_sizes = np.asarray(box_size_list)
+            self.state["visible_box_sizes"] = np.reshape(
+                visible_box_sizes, (self.num_visible_boxes * 3,)
+            )
+            terminated = False
+            return self.state, reward, terminated, {}
 
-    def compute_reward(self) -> float:
-        """Compute the reward for the action.
-        Returns:
+    @property
+    def get_action_mask(self):
+        """Get the action mask from the env.
+          Parameters
+        Returns
         ----------
-            reward: Reward for the action.
-        """
+            np.ndarray: Array with the action mask."""
+        act_mask = np.zeros(
+            shape=(
+                self.num_visible_boxes,
+                self.container.size[0] * self.container.size[1],
+            ),
+            dtype=np.int8,
+        )
+
+        for index in range(len(self.unpacked_visible_boxes)):
+            acm = self.container.action_mask(
+                box=self.unpacked_visible_boxes[index], check_area=100
+            )
+            act_mask[index] = np.reshape(
+                acm, (self.container.size[0] * self.container.size[1],)
+            )
+        return act_mask.flatten()
+
+
+def render(self, mode=None) -> Union[go.Figure, NDArray]:
+    """Render the environment.
+    Args:
+        mode: Mode to render the environment.
+    """
+    if mode is None:
         pass
 
-    def render(self, mode="human") -> Union[go.Figure, NDArray]:
-        """Render the environment.
-        Args:
-            mode: Mode to render the environment.
-        """
-        if mode == "human":
-            return self.container.plot()
+    elif mode == "human":
+        fig = self.container.plot()
+        fig.show()
+        # return None
 
-        elif mode == "rgb_array":
-            import io
-            from PIL import Image
+    elif mode == "rgb_array":
+        import io
+        from PIL import Image
 
-            fig_png = self.container.plot().to_image(format="png")
-            buf = io.BytesIO(fig_png)
-            img = Image.open(buf)
-            return np.asarray(img, dtype=np.int8)
+        fig_png = self.container.plot().to_image(format="png")
+        buf = io.BytesIO(fig_png)
+        img = Image.open(buf)
+        return np.asarray(img, dtype=np.int8)
 
-    def close(self) -> None:
-        """Close the environment."""
-        pass
+    else:
+        raise NotImplementedError
+
+
+def close(self) -> None:
+    """Close the environment."""
+    pass
 
 
 if __name__ == "__main__":

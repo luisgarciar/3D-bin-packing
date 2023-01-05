@@ -96,7 +96,7 @@ class Box:
 
     @property
     def volume(self) -> int:
-        """Area of the bottom face of the box"""
+        """Volume of the box"""
         return self.size[0] * self.size[1] * self.size[2]
 
     @property
@@ -262,6 +262,11 @@ class Container:
     def vertices(self):
         """Returns a list with the vertices of the container"""
         return generate_vertices(self.size, self.position)
+
+    @property
+    def volume(self) -> int:
+        """Volume of the box"""
+        return self.size[0] * self.size[1] * self.size[2]
 
     def reset(self):
         """Resets the container to an empty state"""

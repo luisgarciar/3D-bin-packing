@@ -2,6 +2,10 @@ import random as rd
 import numpy as np
 import pytest
 from src import utils
+import warnings
+
+# Ignore plotly and gym deprecation warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # Data for random tests
 rd.seed(42)
