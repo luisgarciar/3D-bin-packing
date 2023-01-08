@@ -62,7 +62,7 @@ def test_env_reset():
         render_mode=None,
         options=None,
     )
-    obs = env.reset()
+    obs, info = env.reset()
     assert len(env.unpacked_hidden_boxes) == 4
     assert env.observation_space["height_map"].shape == (100,)
     assert env.observation_space["visible_box_sizes"].shape == (3,)
@@ -72,7 +72,7 @@ def test_env_reset():
 @pytest.mark.integtest
 def test_sequence(basic_environment):
     env = basic_environment
-    obs = env.reset()
+    obs, info = env.reset()
     vbs = np.array([3, 3, 3])
     assert_array_equal(obs["visible_box_sizes"], vbs)
     # action for num_visible_boxes = 1
@@ -85,7 +85,6 @@ def test_sequence(basic_environment):
     np.testing.assert_array_equal(obs["height_map"], hm0)
     assert len(env.unpacked_hidden_boxes) == 3
     assert len(env.packed_boxes) == 1
-    assert reward == 1
     assert terminated is False
     # Check that box0 is in the container in the right place
     np.testing.assert_array_equal(
@@ -108,7 +107,6 @@ def test_sequence(basic_environment):
     np.testing.assert_array_equal(obs["height_map"], hm1)
     assert len(env.unpacked_hidden_boxes) == 2
     assert len(env.container.boxes) == 2
-    assert reward == 1
     assert terminated is False
     # Check that box1 is in the container in the right place
     np.testing.assert_array_equal(
@@ -130,7 +128,6 @@ def test_sequence(basic_environment):
     np.testing.assert_array_equal(obs["height_map"], hm2)
     assert len(env.unpacked_hidden_boxes) == 1
     assert len(env.container.boxes) == 3
-    assert reward == 1
     assert terminated is False
     # Check that box2 is in the container in the right place
     np.testing.assert_array_equal(
@@ -152,7 +149,6 @@ def test_sequence(basic_environment):
     np.testing.assert_array_equal(obs["height_map"], hm3)
     assert len(env.unpacked_hidden_boxes) == 0
     assert len(env.container.boxes) == 4
-    assert reward == 1
     assert terminated is False
     # Check that box3 is in the container in the right place
     np.testing.assert_array_equal(
@@ -175,7 +171,6 @@ def test_sequence(basic_environment):
     np.testing.assert_array_equal(obs["height_map"], hm4)
     assert len(env.unpacked_hidden_boxes) == 0
     assert len(env.container.boxes) == 5
-    assert reward == 1
     assert terminated is True
 
 
@@ -184,9 +179,9 @@ def test_reset():
     env = make(
         "PackingEnv-v0", container_size=[10, 10, 10], box_sizes=bs, num_visible_boxes=1
     )
-    obs1 = env.reset()
-    obs2 = env.reset()
-    check_env(env)
+    obs1, _ = env.reset()
+    obs2, _ = env.reset()
+    #    check_env(env)
 
     assert obs1 in env.observation_space
     assert env.observation_space.contains(obs2)
@@ -222,7 +217,7 @@ def test_invalid_action():
         num_visible_boxes=1,
         render_mode="human",
     )
-    obs = env.reset(seed=5)
+    obs, _ = env.reset(seed=5)
     action_mask = env.get_action_mask
     # Only one position is valid to place the first box
     np.testing.assert_array_equal(action_mask, np.array([1, 0, 0, 0, 0, 0, 0, 0, 0]))

@@ -446,12 +446,12 @@ def render(self, mode=None) -> Union[go.Figure, NDArray]:
         mode: Mode to render the environment.
     """
     if mode is None:
-        return None
+        pass
 
     elif mode == "human":
         fig = self.container.plot()
-        # fig.show()
-        return fig
+        fig.show()
+        # return None
 
     elif mode == "rgb_array":
         import io
