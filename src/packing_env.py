@@ -20,7 +20,7 @@ We follow the space representation depicted below, all coordinates and lengths o
 
 """
 import copy
-from typing import List, Tuple, Union, Dict
+from typing import List, Tuple, Union
 
 import gym
 import numpy as np
@@ -30,7 +30,6 @@ from gym.utils import seeding
 from nptyping import NDArray
 
 from src.packing_kernel import Box, Container
-from src.utils import boxes_generator
 
 
 class PackingEnv(gym.Env):
@@ -174,15 +173,6 @@ class PackingEnv(gym.Env):
             dtype=np.int32,
         )
 
-        # if num_visible_boxes > 1:
-        #     # Dict to define the action space for num_visible_boxes > 1
-        #     action_dict = {
-        #         "box_index": Discrete(num_visible_boxes),
-        #         "position": MultiDiscrete([container_size[0], container_size[1]]),
-        #     }
-        #     self.action_space = gym.spaces.Dict(action_dict)
-        # else:
-
     def seed(self, seed: int = 42):
         """Seed the random number generator for the environment.
         Parameters
@@ -277,7 +267,7 @@ class PackingEnv(gym.Env):
         hm = np.reshape(hm, (self.container.size[0] * self.container.size[1],))
 
         # Set the initial blank action_mask
-        self.action_mask = self.get_action_mask
+        self.action_mask = self.action_masks
 
         # Removed action mask from the observation space for now
         # action_mask = np.asarray(
@@ -414,8 +404,8 @@ class PackingEnv(gym.Env):
             terminated = False
             return self.state, reward, terminated, {}
 
-    @property
-    def get_action_mask(self):
+    # @property
+    def action_masks(self) -> List[bool]:
         """Get the action mask from the env.
           Parameters
         Returns
@@ -436,38 +426,37 @@ class PackingEnv(gym.Env):
             act_mask[index] = np.reshape(
                 acm, (self.container.size[0] * self.container.size[1],)
             )
-        return act_mask.flatten()
+        return [x == 1 for x in act_mask.flatten()]
 
+    def render(self, mode=None) -> Union[go.Figure, NDArray]:
 
-def render(self, mode=None) -> Union[go.Figure, NDArray]:
-    """Render the environment.
-    Args:
-        mode: Mode to render the environment.
-    """
-    if mode is None:
+        """Render the environment.
+        Args:
+            mode: Mode to render the environment.
+        """
+
+        if mode is None:
+            pass
+
+        elif mode == "human":
+            fig = self.container.plot()
+            fig.show()
+            return None
+        #
+        elif mode == "rgb_array":
+            import io
+            from PIL import Image
+
+            fig_png = self.container.plot().to_image(format="png")
+            buf = io.BytesIO(fig_png)
+            img = Image.open(buf)
+            return np.asarray(img, dtype=np.int8)
+        else:
+            raise NotImplementedError
+
+    def close(self) -> None:
+        """Close the environment."""
         pass
-
-    elif mode == "human":
-        fig = self.container.plot()
-        fig.show()
-        # return None
-
-    elif mode == "rgb_array":
-        import io
-        from PIL import Image
-
-        fig_png = self.container.plot().to_image(format="png")
-        buf = io.BytesIO(fig_png)
-        img = Image.open(buf)
-        return np.asarray(img, dtype=np.int8)
-
-    else:
-        raise NotImplementedError
-
-
-def close(self) -> None:
-    """Close the environment."""
-    pass
 
 
 if __name__ == "__main__":
