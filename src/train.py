@@ -1,10 +1,8 @@
-import glob
 import warnings
 
 import gym
-from PIL import Image
-from numpy.typing import NDArray
 from sb3_contrib.ppo_mask import MaskablePPO
+from stable_baselines3.common.env_checker import check_env
 
 from src.utils import boxes_generator
 
@@ -57,17 +55,18 @@ if __name__ == "__main__":
         only_terminal_reward=False,
     )
     env = make_env(container_size, 5, 1, 0, "rgb_array", False, False)
+    check_env(env, warn=True)
 
     model = MaskablePPO("MultiInputPolicy", env, verbose=1)
     model.learn(total_timesteps=10)
     print("done training")
     model.save("ppo_mask")
 
-    obs = env.reset()
+    obs = orig_env.reset()
     frames = []
     for _ in range(1000):
         action, _states = model.predict(obs, deterministic=True)
-        obs, rewards, done, info = env.step(action)
+        obs, rewards, done, info = orig_env.step(action)
         frames.append(env.render(mode="rgb_array"))
     env.close()
 

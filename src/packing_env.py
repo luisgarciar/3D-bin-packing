@@ -51,9 +51,11 @@ class PackingEnv(gym.Env):
         height_map      Top view of the container         (container.size[0],container.size[1])  (0,container.size[2])
                         with heights of boxes already
                         placed
+                        Type: MultiDiscrete
 
         box_sizes       Array with sizes of the upcoming   (num_upcoming_boxes, 3)               (1, container.size[2])
                         boxes
+
 
         Action:
         Type:  Discrete(container.size[0]*container.size[1]*num_visible_boxes)
@@ -148,13 +150,6 @@ class PackingEnv(gym.Env):
             "height_map": MultiDiscrete(height_map_repr),
             "visible_box_sizes": MultiDiscrete(box_repr),
         }
-
-        # The action mask is a Multibinary array with the same length as the number of positions
-        # in the container times the number of visible boxes
-        # Removed action mask for now
-        # "action_mask": MultiBinary(
-        #    container_size[0] * container_size[1] * num_visible_boxes
-        # ),
 
         # Observation space
         self.observation_space = gym.spaces.Dict(observation_dict)
@@ -283,8 +278,8 @@ class PackingEnv(gym.Env):
 
         return self.state
 
-    def compute_reward(self, reward_type: str = "terminal_step") -> float:
-        """Compute the reward for the action.
+    def calculate_reward(self, reward_type: str = "terminal_step") -> float:
+        """calculate the reward for the action.
         Returns:
         ----------
             reward: Reward for the action.
@@ -359,7 +354,7 @@ class PackingEnv(gym.Env):
             if self.only_terminal_reward:
                 reward = 0
             else:
-                reward = self.compute_reward(reward_type="interm_step")
+                reward = self.calculate_reward(reward_type="interm_step")
 
             # If the action is not valid, remove the box and add it to skipped boxes
         else:
@@ -374,7 +369,7 @@ class PackingEnv(gym.Env):
         if len(self.unpacked_visible_boxes) == 0:
             self.done = True
             terminated = self.done
-            reward = self.compute_reward(reward_type="terminal_step")
+            reward = self.calculate_reward(reward_type="terminal_step")
             self.state["visible_box_sizes"] = []
             return self.state, reward, terminated, {}
         # TO DO: add info, return info
