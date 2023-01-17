@@ -264,12 +264,6 @@ class PackingEnv(gym.Env):
         # Set the initial blank action_mask
         self.action_mask = self.action_masks
 
-        # Removed action mask from the observation space for now
-        # action_mask = np.asarray(
-        # self.container.action_mask(box=self.unpacked_visible_boxes[0]), dtype=np.int8, )
-        # "action_mask": np.reshape(
-        # action_mask, (self.container.size[0] * self.container.size[1],)
-
         vbs = np.reshape(visible_box_sizes, (self.num_visible_boxes * 3,))
         self.state = {"height_map": hm, "visible_box_sizes": vbs}
 
@@ -308,7 +302,7 @@ class PackingEnv(gym.Env):
 
         return reward
 
-    def step(self, action: int) -> Tuple[NDArray, float, bool, bool, dict]:
+    def step(self, action: int) -> Tuple[NDArray, float, bool, dict]:
         """Step the environment.
         Parameters:
         -----------
@@ -325,7 +319,7 @@ class PackingEnv(gym.Env):
         box_index, position = self.action_to_position(action)
         # if the box is a dummy box, skip the step
         if box_index >= len(self.unpacked_visible_boxes):
-            return self.state, 0, self.done, False, {}
+            return self.state, 0, self.done, {}
 
         # If it is not a dummy box, check if the action is valid
         # TO DO: add parameter check area, add info, return info
@@ -370,9 +364,8 @@ class PackingEnv(gym.Env):
             self.done = True
             terminated = self.done
             reward = self.calculate_reward(reward_type="terminal_step")
-            self.state["visible_box_sizes"] = []
+            self.state["visible_box_sizes"] = [[0, 0, 0]] * self.num_visible_boxes
             return self.state, reward, terminated, {}
-        # TO DO: add info, return info
 
         if len(self.unpacked_visible_boxes) == self.num_visible_boxes:
             # Update the list of visible box sizes in the observation space
@@ -383,6 +376,7 @@ class PackingEnv(gym.Env):
                 visible_box_sizes, (self.num_visible_boxes * 3,)
             )
             terminated = False
+            self.state
             return self.state, reward, terminated, {}
 
         if len(self.unpacked_visible_boxes) < self.num_visible_boxes:

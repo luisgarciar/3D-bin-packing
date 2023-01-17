@@ -6,6 +6,8 @@ from stable_baselines3.common.env_checker import check_env
 
 from src.utils import boxes_generator
 
+from plotly_gif import GIF
+
 
 def make_env(
     container_size,
@@ -64,18 +66,15 @@ if __name__ == "__main__":
 
     obs = orig_env.reset()
     frames = []
-    for _ in range(1000):
+    done = False
+    gif = GIF(gif_name="trained_5boxes.gif", gif_path="../gifs")
+
+    while not done:
         action, _states = model.predict(obs, deterministic=True)
         obs, rewards, done, info = orig_env.step(action)
-        frames.append(env.render(mode="rgb_array"))
-    env.close()
+        frames.append(env.render(mode="human"))
+        fig = env.render()
+        gif.create_image(fig)
 
-    gif = frames[0]
-    gif.save(
-        "rollout",
-        format="GIF",
-        append_images=frames[1:],
-        save_all=True,
-        duration=100,
-        loop=0,
-    )
+    env.close()
+    gif.create_gif(length=5000)
