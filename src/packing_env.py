@@ -20,7 +20,7 @@ We follow the space representation depicted below, all coordinates and lengths o
 
 """
 import copy
-from typing import List, Tuple, Union, Dict
+from typing import List, Tuple, Union
 
 import gym
 import numpy as np
@@ -30,7 +30,6 @@ from gym.utils import seeding
 from nptyping import NDArray
 
 from src.packing_kernel import Box, Container
-from src.utils import boxes_generator
 
 
 class PackingEnv(gym.Env):
@@ -52,9 +51,11 @@ class PackingEnv(gym.Env):
         height_map      Top view of the container         (container.size[0],container.size[1])  (0,container.size[2])
                         with heights of boxes already
                         placed
+                        Type: MultiDiscrete
 
         box_sizes       Array with sizes of the upcoming   (num_upcoming_boxes, 3)               (1, container.size[2])
                         boxes
+
 
         Action:
         Type:  Discrete(container.size[0]*container.size[1]*num_visible_boxes)
@@ -150,13 +151,6 @@ class PackingEnv(gym.Env):
             "visible_box_sizes": MultiDiscrete(box_repr),
         }
 
-        # The action mask is a Multibinary array with the same length as the number of positions
-        # in the container times the number of visible boxes
-        # Removed action mask for now
-        # "action_mask": MultiBinary(
-        #    container_size[0] * container_size[1] * num_visible_boxes
-        # ),
-
         # Observation space
         self.observation_space = gym.spaces.Dict(observation_dict)
         # Action space
@@ -173,15 +167,6 @@ class PackingEnv(gym.Env):
             ),
             dtype=np.int32,
         )
-
-        # if num_visible_boxes > 1:
-        #     # Dict to define the action space for num_visible_boxes > 1
-        #     action_dict = {
-        #         "box_index": Discrete(num_visible_boxes),
-        #         "position": MultiDiscrete([container_size[0], container_size[1]]),
-        #     }
-        #     self.action_space = gym.spaces.Dict(action_dict)
-        # else:
 
     def seed(self, seed: int = 42):
         """Seed the random number generator for the environment.
@@ -230,7 +215,7 @@ class PackingEnv(gym.Env):
         )
         return action
 
-    def reset(self, seed=None, options=None) -> Dict:
+    def reset(self, seed=None, options=None) -> Tuple:
         """Reset the environment.
         Parameters
         ----------
@@ -277,25 +262,18 @@ class PackingEnv(gym.Env):
         hm = np.reshape(hm, (self.container.size[0] * self.container.size[1],))
 
         # Set the initial blank action_mask
-        self.action_mask = self.get_action_mask
-
-        # Removed action mask from the observation space for now
-        # action_mask = np.asarray(
-        # self.container.action_mask(box=self.unpacked_visible_boxes[0]), dtype=np.int8, )
-        # "action_mask": np.reshape(
-        # action_mask, (self.container.size[0] * self.container.size[1],)
+        self.action_mask = self.action_masks
 
         vbs = np.reshape(visible_box_sizes, (self.num_visible_boxes * 3,))
         self.state = {"height_map": hm, "visible_box_sizes": vbs}
 
         self.done = False
         self.seed(seed)
-        info = {}
 
-        return self.state, info
+        return self.state
 
-    def compute_reward(self, reward_type: str = "terminal_step") -> float:
-        """Compute the reward for the action.
+    def calculate_reward(self, reward_type: str = "terminal_step") -> float:
+        """calculate the reward for the action.
         Returns:
         ----------
             reward: Reward for the action.
@@ -324,7 +302,7 @@ class PackingEnv(gym.Env):
 
         return reward
 
-    def step(self, action: int) -> Tuple[NDArray, float, bool, bool, dict]:
+    def step(self, action: int) -> Tuple[NDArray, float, bool, dict]:
         """Step the environment.
         Parameters:
         -----------
@@ -334,7 +312,6 @@ class PackingEnv(gym.Env):
             observation: Dictionary with the observation of the environment.
             reward: Reward for the action.
             terminated: Whether the episode is terminated.
-            truncated: Whether the episode is truncated.
             info: Dictionary with additional information.
         """
 
@@ -342,7 +319,7 @@ class PackingEnv(gym.Env):
         box_index, position = self.action_to_position(action)
         # if the box is a dummy box, skip the step
         if box_index >= len(self.unpacked_visible_boxes):
-            return self.state, 0, self.done, False, {}
+            return self.state, 0, self.done, {}
 
         # If it is not a dummy box, check if the action is valid
         # TO DO: add parameter check area, add info, return info
@@ -371,7 +348,7 @@ class PackingEnv(gym.Env):
             if self.only_terminal_reward:
                 reward = 0
             else:
-                reward = self.compute_reward(reward_type="interm_step")
+                reward = self.calculate_reward(reward_type="interm_step")
 
             # If the action is not valid, remove the box and add it to skipped boxes
         else:
@@ -386,11 +363,9 @@ class PackingEnv(gym.Env):
         if len(self.unpacked_visible_boxes) == 0:
             self.done = True
             terminated = self.done
-            truncated = False
-            reward = self.compute_reward(reward_type="terminal_step")
-            self.state["visible_box_sizes"] = []
-            return self.state, reward, terminated, truncated, {}
-        # TO DO: add info, return info
+            reward = self.calculate_reward(reward_type="terminal_step")
+            self.state["visible_box_sizes"] = [[0, 0, 0]] * self.num_visible_boxes
+            return self.state, reward, terminated, {}
 
         if len(self.unpacked_visible_boxes) == self.num_visible_boxes:
             # Update the list of visible box sizes in the observation space
@@ -401,8 +376,8 @@ class PackingEnv(gym.Env):
                 visible_box_sizes, (self.num_visible_boxes * 3,)
             )
             terminated = False
-            truncated = False
-            return self.state, reward, terminated, truncated, {}
+            self.state
+            return self.state, reward, terminated, {}
 
         if len(self.unpacked_visible_boxes) < self.num_visible_boxes:
             # If there are fewer boxes than the maximum number of visible boxes, add dummy boxes
@@ -416,11 +391,10 @@ class PackingEnv(gym.Env):
                 visible_box_sizes, (self.num_visible_boxes * 3,)
             )
             terminated = False
-            truncated = False
             return self.state, reward, terminated, {}
 
-    @property
-    def get_action_mask(self):
+    # @property
+    def action_masks(self) -> List[bool]:
         """Get the action mask from the env.
           Parameters
         Returns
@@ -441,38 +415,37 @@ class PackingEnv(gym.Env):
             act_mask[index] = np.reshape(
                 acm, (self.container.size[0] * self.container.size[1],)
             )
-        return act_mask.flatten()
+        return [x == 1 for x in act_mask.flatten()]
 
+    def render(self, mode=None) -> Union[go.Figure, NDArray]:
 
-def render(self, mode=None) -> Union[go.Figure, NDArray]:
-    """Render the environment.
-    Args:
-        mode: Mode to render the environment.
-    """
-    if mode is None:
+        """Render the environment.
+        Args:
+            mode: Mode to render the environment.
+        """
+
+        if mode is None:
+            pass
+
+        elif mode == "human":
+            fig = self.container.plot()
+            # fig.show()
+            return fig
+        #
+        elif mode == "rgb_array":
+            import io
+            from PIL import Image
+
+            fig_png = self.container.plot().to_image(format="png")
+            buf = io.BytesIO(fig_png)
+            img = Image.open(buf)
+            return np.asarray(img, dtype=np.int8)
+        else:
+            raise NotImplementedError
+
+    def close(self) -> None:
+        """Close the environment."""
         pass
-
-    elif mode == "human":
-        fig = self.container.plot()
-        fig.show()
-        # return None
-
-    elif mode == "rgb_array":
-        import io
-        from PIL import Image
-
-        fig_png = self.container.plot().to_image(format="png")
-        buf = io.BytesIO(fig_png)
-        img = Image.open(buf)
-        return np.asarray(img, dtype=np.int8)
-
-    else:
-        raise NotImplementedError
-
-
-def close(self) -> None:
-    """Close the environment."""
-    pass
 
 
 if __name__ == "__main__":

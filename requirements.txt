@@ -1,10 +1,10 @@
-gym==0.26.2
+gym==0.21
 nptyping==2.3.1
 numpy== 1.21.5
 Pillow==9.2.0
 plotly==5.9.0
 pytest==7.1.2
 plotly_gif==0.0.3
-sb3-contrib==1.6.1
+sb3-contrib==1.7
 jupyter
 

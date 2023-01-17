@@ -1,40 +1,91 @@
-from src.utils import boxes_generator
-import gym
-from gym import make
 import warnings
-from sb3_contrib.ppo_mask import MultiInputPolicy
-from sb3_contrib.common.wrappers import ActionMasker
+
+import gym
 from sb3_contrib.ppo_mask import MaskablePPO
-import numpy as np
-from numpy.typing import NDArray
+from stable_baselines3.common.env_checker import check_env
+
+from src.utils import boxes_generator
+
+from plotly_gif import GIF
 
 
-def mask_fn(env: gym.Env) -> NDArray:
-    # Do whatever you'd like in this function to return the action mask
-    # for the current env. In this example, we assume the env has a
-    # helpful method we can rely on.
-    return env.get_action_mask
-
-
-# Ignore plotly and gym deprecation warnings
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-# Environment initialization
-container_size = [10, 10, 10]
-box_sizes2 = [[3, 3, 3], [3, 2, 3], [3, 4, 2], [3, 2, 4], [3, 2, 3]]
-env = make(
-    "PackingEnv-v0",
-    container_size=container_size,
-    box_sizes=box_sizes2,
-    num_visible_boxes=3,
+def make_env(
+    container_size,
+    num_boxes,
+    num_visible_boxes=1,
+    seed=0,
     render_mode=None,
-    options=None,
-)
-obs = env.reset()
+    random_boxes=False,
+    only_terminal_reward=False,
+):
+    """
+    Parameters
 
-# MaskablePPO initialization
-# To configure the Maskable PPO agent, we need to wrap the environment
-env = ActionMasker(env, mask_fn)  # Wrap to enable masking
-model = MaskablePPO("MultiInputPolicy", env, gamma=0.4, verbose=1)
-model.learn(5)
-print("done training")
-model.save("ppo_mask")
+    ----------
+    container_size: size of the container
+    num_boxes: number of boxes to be packed
+    num_visible_boxes: number of boxes visible to the agent
+    seed: seed for RNG
+    render_mode: render mode for the environment
+    random_boxes: whether to use random boxes or not
+    only_terminal_reward: whether to use only terminal reward or not
+    """
+    env = gym.make(
+        "PackingEnv-v0",
+        container_size=container_size,
+        box_sizes=boxes_generator(container_size, num_boxes, seed),
+        num_visible_boxes=num_visible_boxes,
+        render_mode=render_mode,
+        random_boxes=random_boxes,
+        only_terminal_reward=only_terminal_reward,
+    )
+    return env
+
+
+if __name__ == "__main__":
+    warnings.filterwarnings("ignore")
+    container_size = [10, 10, 10]
+    box_sizes2 = [[3, 3, 3], [3, 2, 3], [3, 4, 2], [3, 2, 4], [3, 2, 3]]
+
+    orig_env = gym.make(
+        "PackingEnv-v0",
+        container_size=container_size,
+        box_sizes=box_sizes2,
+        num_visible_boxes=1,
+        render_mode="human",
+        random_boxes=False,
+        only_terminal_reward=False,
+    )
+
+    env = gym.make(
+        "PackingEnv-v0",
+        container_size=container_size,
+        box_sizes=box_sizes2,
+        num_visible_boxes=1,
+        render_mode="human",
+        random_boxes=False,
+        only_terminal_reward=False,
+    )
+
+    check_env(env, warn=True)
+
+    model = MaskablePPO("MultiInputPolicy", env, verbose=1)
+    model.learn(total_timesteps=10)
+    print("done training")
+    model.save("ppo_mask")
+
+    obs = orig_env.reset()
+    frames = []
+    done = False
+    gif = GIF(gif_name="trained_5boxes.gif", gif_path="../gifs")
+    figs = []
+
+    while not done:
+        action, _states = model.predict(obs, deterministic=True)
+        obs, rewards, done, info = orig_env.step(action)
+        fig = env.render(mode="human")
+        figs.append(fig)
+
+    gif.create_gif(figs)
+    env.close()
+    # gif.create_gif(length=5000)
