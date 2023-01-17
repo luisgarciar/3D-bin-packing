@@ -429,8 +429,8 @@ class PackingEnv(gym.Env):
 
         elif mode == "human":
             fig = self.container.plot()
-            fig.show()
-            return None
+            # fig.show()
+            return fig
         #
         elif mode == "rgb_array":
             import io

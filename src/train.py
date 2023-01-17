@@ -52,11 +52,21 @@ if __name__ == "__main__":
         container_size=container_size,
         box_sizes=box_sizes2,
         num_visible_boxes=1,
-        render_mode="rgb_array",
+        render_mode="human",
         random_boxes=False,
         only_terminal_reward=False,
     )
-    env = make_env(container_size, 5, 1, 0, "rgb_array", False, False)
+
+    env = gym.make(
+        "PackingEnv-v0",
+        container_size=container_size,
+        box_sizes=box_sizes2,
+        num_visible_boxes=1,
+        render_mode="human",
+        random_boxes=False,
+        only_terminal_reward=False,
+    )
+
     check_env(env, warn=True)
 
     model = MaskablePPO("MultiInputPolicy", env, verbose=1)
@@ -68,13 +78,14 @@ if __name__ == "__main__":
     frames = []
     done = False
     gif = GIF(gif_name="trained_5boxes.gif", gif_path="../gifs")
+    figs = []
 
     while not done:
         action, _states = model.predict(obs, deterministic=True)
         obs, rewards, done, info = orig_env.step(action)
-        frames.append(env.render(mode="human"))
-        fig = env.render()
-        gif.create_image(fig)
+        fig = env.render(mode="human")
+        figs.append(fig)
 
+    gif.create_gif(figs)
     env.close()
-    gif.create_gif(length=5000)
+    # gif.create_gif(length=5000)
