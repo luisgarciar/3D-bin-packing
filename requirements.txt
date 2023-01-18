@@ -1,4 +1,4 @@
-gym==0.26.2
+gym==0.21
 nptyping==2.3.1
 numpy== 1.21.5
 Pillow==9.2.0
