@@ -334,7 +334,6 @@ class PackingEnv(gym.Env):
             observation: Dictionary with the observation of the environment.
             reward: Reward for the action.
             terminated: Whether the episode is terminated.
-            truncated: Whether the episode is truncated.
             info: Dictionary with additional information.
         """
 
@@ -386,10 +385,9 @@ class PackingEnv(gym.Env):
         if len(self.unpacked_visible_boxes) == 0:
             self.done = True
             terminated = self.done
-            truncated = False
             reward = self.compute_reward(reward_type="terminal_step")
             self.state["visible_box_sizes"] = []
-            return self.state, reward, terminated, truncated, {}
+            return self.state, reward, terminated, {}
         # TO DO: add info, return info
 
         if len(self.unpacked_visible_boxes) == self.num_visible_boxes:
@@ -401,8 +399,7 @@ class PackingEnv(gym.Env):
                 visible_box_sizes, (self.num_visible_boxes * 3,)
             )
             terminated = False
-            truncated = False
-            return self.state, reward, terminated, truncated, {}
+            return self.state, reward, terminated, {}
 
         if len(self.unpacked_visible_boxes) < self.num_visible_boxes:
             # If there are fewer boxes than the maximum number of visible boxes, add dummy boxes
@@ -416,7 +413,6 @@ class PackingEnv(gym.Env):
                 visible_box_sizes, (self.num_visible_boxes * 3,)
             )
             terminated = False
-            truncated = False
             return self.state, reward, terminated, {}
 
     @property

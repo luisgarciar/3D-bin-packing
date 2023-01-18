@@ -23,8 +23,14 @@ def make_env(
     only_terminal_reward=False,
 ):
     """Utility function for initializing bin packing env with action masking
+
+    Parameters
+    ----------------
     :param seed: (int) the inital seed for RNG
     :param rank: (int) index of the subprocess
+
+    Output:
+    Environment with action masking enabled
     """
 
     env = gym.make(
@@ -38,6 +44,7 @@ def make_env(
     )
     env = ActionMasker(env, mask_fn)
     return env
+
 
 if __name__ == "__main__":
     warnings.filterwarnings("ignore")

@@ -77,7 +77,8 @@ def test_sequence(basic_environment):
     assert_array_equal(obs["visible_box_sizes"], vbs)
     # action for num_visible_boxes = 1
     action = 0
-    obs, reward, terminated, truncated, info = env.step(action)
+    # obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, info = env.step(action)
     # Check that the height map is correct
     hm0 = np.zeros(shape=[10, 10], dtype=np.int32)
     hm0[0:3, 0:3] = 3
@@ -97,7 +98,8 @@ def test_sequence(basic_environment):
 
     # Set an action that is allowed for box 1
     action = 0
-    obs, reward, terminated, truncated, info = env.step(action)
+    # obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, info = env.step(action)
 
     # Check that the height map after placing box1 is correct
     hm1 = np.zeros(shape=[10, 10], dtype=np.int32)
@@ -117,7 +119,9 @@ def test_sequence(basic_environment):
     assert_array_equal(obs["visible_box_sizes"], np.array([3, 4, 2]))
     # Set an action that is allowed
     action = 30
-    obs, reward, terminated, truncated, info = env.step(action)
+    # obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, info = env.step(action)
+
     # Check the height map after the action
     hm2 = np.zeros(shape=[10, 10], dtype=np.int32)
     hm2[0:3, 0:2] = 6
@@ -138,7 +142,8 @@ def test_sequence(basic_environment):
     assert_array_equal(obs["visible_box_sizes"], np.array([3, 2, 4]))
     # Set an action that is allowed
     action = 3
-    obs, reward, terminated, truncated, info = env.step(action)
+    # obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, info = env.step(action)
     # Check the height map after the action
     hm3 = np.zeros(shape=[10, 10], dtype=np.int32)
     hm3[0:3, 0:2] = 6
@@ -159,7 +164,8 @@ def test_sequence(basic_environment):
     assert_array_equal(obs["visible_box_sizes"], np.array([3, 2, 3]))
     # Set an action that is allowed
     action = 5
-    obs, reward, terminated, truncated, info = env.step(action)
+    # obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, info = env.step(action)
     # Check the height map after the action
     hm4 = np.zeros(shape=[10, 10], dtype=np.int32)
     hm4[0:3, 0:2] = 6
@@ -202,7 +208,8 @@ def test_two_box_action_mask():
     env.reset(seed=5)
 
     action = env.position_to_action([0, 0])
-    obs, reward, terminated, truncated, info = env.step(action)
+    # obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, info = env.step(action)
     act_mask = env.get_action_mask
     np.testing.assert_array_equal(act_mask, np.array([0, 0, 0, 0, 0, 0, 0, 0, 0]))
 
@@ -222,10 +229,13 @@ def test_invalid_action():
     # Only one position is valid to place the first box
     np.testing.assert_array_equal(action_mask, np.array([1, 0, 0, 0, 0, 0, 0, 0, 0]))
     action = env.position_to_action([0, 0])
-    obs, reward, terminated, truncated, info = env.step(action)
+    # obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, info = env.step(action)
     action_mask = env.get_action_mask
     np.testing.assert_array_equal(action_mask, np.array([0, 0, 0, 0, 0, 0, 0, 0, 0]))
     action = env.position_to_action([0, 0])
     # action should be invalid and the box should be skipped
-    obs, reward, terminated, truncated, info = env.step(action)
+    # obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, info = env.step(action)
+
     assert len(env.skipped_boxes) == 1
