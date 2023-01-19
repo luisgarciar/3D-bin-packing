@@ -8,6 +8,8 @@ from src.utils import boxes_generator
 
 from plotly_gif import GIF
 
+import io
+from PIL import Image
 
 def make_env(
     container_size,
@@ -70,12 +72,12 @@ if __name__ == "__main__":
     check_env(env, warn=True)
 
     model = MaskablePPO("MultiInputPolicy", env, verbose=1)
+    print("begin training")
     model.learn(total_timesteps=10)
     print("done training")
     model.save("ppo_mask")
 
     obs = orig_env.reset()
-    frames = []
     done = False
     gif = GIF(gif_name="trained_5boxes.gif", gif_path="../gifs")
     figs = []
@@ -84,8 +86,17 @@ if __name__ == "__main__":
         action, _states = model.predict(obs, deterministic=True)
         obs, rewards, done, info = orig_env.step(action)
         fig = env.render(mode="human")
-        figs.append(fig)
-
-    gif.create_gif(figs)
+        fig_png = fig.to_image(format="png")
+        buf = io.BytesIO(fig_png)
+        img = Image.open(buf)
+        figs.append(img)
+    print("done packing")
     env.close()
+
+## Save gif
+    figs[0].save('../gifs/train_5_boxes.gif', format='GIF',
+                   append_images=figs[1:],
+                   save_all=True,
+                   duration=300, loop=0)
+
     # gif.create_gif(length=5000)
