@@ -118,6 +118,7 @@ def test_sequence(basic_environment):
     # Set an action that is allowed
     action = 30
     obs, reward, terminated, info = env.step(action)
+
     # Check the height map after the action
     hm2 = np.zeros(shape=[10, 10], dtype=np.int32)
     hm2[0:3, 0:2] = 6
@@ -202,7 +203,7 @@ def test_two_box_action_mask():
     env.reset(seed=5)
 
     action = env.position_to_action([0, 0])
-    obs, reward, done, info = env.step(action)
+    obs, reward, terminated, info = env.step(action)
     act_mask = env.get_action_mask
     np.testing.assert_array_equal(act_mask, np.array([0, 0, 0, 0, 0, 0, 0, 0, 0]))
 
@@ -222,10 +223,11 @@ def test_invalid_action():
     # Only one position is valid to place the first box
     np.testing.assert_array_equal(action_mask, np.array([1, 0, 0, 0, 0, 0, 0, 0, 0]))
     action = env.position_to_action([0, 0])
-    obs, reward, done, info = env.step(action)
+    obs, reward, terminated, info = env.step(action)
     action_mask = env.get_action_mask
     np.testing.assert_array_equal(action_mask, np.array([0, 0, 0, 0, 0, 0, 0, 0, 0]))
     action = env.position_to_action([0, 0])
     # action should be invalid and the box should be skipped
-    obs, reward, done, info = env.step(action)
+    obs, reward, terminated, info = env.step(action)
+
     assert len(env.skipped_boxes) == 1
