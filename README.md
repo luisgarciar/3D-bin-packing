@@ -29,13 +29,7 @@ In your terminal window, activate your environment and clone the repository:
 git clone https://github.com/luisgarciar/3D-bin-packing.git
 ```
 
-To run the code, you need to install a few dependencies. The package sb3-contrib is used for RL training, which requires
-a special version of stable-baselines3 to avoid compatibility issues with other packages. To install the custom version
-of stable-baselines3, run the following command:
-```
-pip install git+https://github.com/carlosluis/stable-baselines3@fix_tests
-```
-Then, go to the cloned directory and install the remaining dependencies:
+To run the code, you need to install a few dependencies. Go to the cloned directory and install the required packages:
 ```
 cd 3D-bin-packing
 pip install -r requirements.txt
