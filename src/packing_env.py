@@ -1,5 +1,5 @@
 """
-Packing Gym: An OpenAI Gym environment for 3D packing problems.
+Packing Gymnasium: A Gymnasium environment for 3D packing problems.
 We follow the space representation depicted below, all coordinates and lengths of boxes and containers are integers.
 
     x: depth
@@ -22,14 +22,14 @@ We follow the space representation depicted below, all coordinates and lengths o
 import copy
 from typing import List, Tuple, Union
 
-import gym
+import gymnasium as gym
 import numpy as np
 import plotly.graph_objects as go
-from gym.spaces import Discrete, MultiDiscrete
-from gym.utils import seeding
-from nptyping import NDArray
+from gymnasium.spaces import Discrete, MultiDiscrete
+from numpy.typing import NDArray
 
 from src.packing_kernel import Box, Container
+from src.utils import boxes_generator
 
 
 class PackingEnv(gym.Env):
@@ -76,14 +76,14 @@ class PackingEnv(gym.Env):
         in the container.
     """
 
-    metadata = {"render_modes": ["human", "rgb_array", "None"], "render_fps": 4}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
     def __init__(
         self,
         container_size: List[int],
         box_sizes: List[List[int]],
         num_visible_boxes: int = 1,
-        render_mode: str = "None",
+        render_mode: str = None,
         options: dict = None,
         random_boxes: bool = False,
         only_terminal_reward: bool = True,
@@ -168,16 +168,6 @@ class PackingEnv(gym.Env):
             dtype=np.int32,
         )
 
-    def seed(self, seed: int = 42):
-        """Seed the random number generator for the environment.
-        Parameters
-        -----------
-            seed: int
-                Seed for the environment.
-        """
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
-
     def action_to_position(self, action: int) -> Tuple[int, NDArray]:
         """Converts an index to a tuple with a box index
         and a position in the container.
@@ -228,6 +218,7 @@ class PackingEnv(gym.Env):
             obs, info: Tuple with the initial state and a dictionary with information of the environment.
         """
 
+        super().reset(seed=seed)
         self.container.reset()
 
         if self.random_boxes:
@@ -262,15 +253,14 @@ class PackingEnv(gym.Env):
         hm = np.reshape(hm, (self.container.size[0] * self.container.size[1],))
 
         # Set the initial blank action_mask
-        self.action_mask = self.action_masks
+        self.action_mask = self.action_masks()
 
         vbs = np.reshape(visible_box_sizes, (self.num_visible_boxes * 3,))
         self.state = {"height_map": hm, "visible_box_sizes": vbs}
 
         self.done = False
-        self.seed(seed)
 
-        return self.state
+        return self.state, {}
 
     def calculate_reward(self, reward_type: str = "terminal_step") -> float:
         """calculate the reward for the action.
@@ -302,7 +292,7 @@ class PackingEnv(gym.Env):
 
         return reward
 
-    def step(self, action: int) -> Tuple[NDArray, float, bool, dict]:
+    def step(self, action: int) -> Tuple[NDArray, float, bool, bool, dict]:
         """Step the environment.
         Parameters:
         -----------
@@ -312,14 +302,16 @@ class PackingEnv(gym.Env):
             observation: Dictionary with the observation of the environment.
             reward: Reward for the action.
             terminated: Whether the episode is terminated.
+            truncated: Whether the episode is truncated.
             info: Dictionary with additional information.
         """
+        truncated = False
 
         # Get the index and position of the box to be placed in the container
         box_index, position = self.action_to_position(action)
         # if the box is a dummy box, skip the step
         if box_index >= len(self.unpacked_visible_boxes):
-            return self.state, 0, self.done, {}
+            return self.state, 0, self.done, truncated, {}
 
         # If it is not a dummy box, check if the action is valid
         # TO DO: add parameter check area, add info, return info
@@ -365,7 +357,7 @@ class PackingEnv(gym.Env):
             terminated = self.done
             reward = self.calculate_reward(reward_type="terminal_step")
             self.state["visible_box_sizes"] = [[0, 0, 0]] * self.num_visible_boxes
-            return self.state, reward, terminated, {}
+            return self.state, reward, terminated, truncated, {}
 
         if len(self.unpacked_visible_boxes) == self.num_visible_boxes:
             # Update the list of visible box sizes in the observation space
@@ -376,8 +368,7 @@ class PackingEnv(gym.Env):
                 visible_box_sizes, (self.num_visible_boxes * 3,)
             )
             terminated = False
-            self.state
-            return self.state, reward, terminated, {}
+            return self.state, reward, terminated, truncated, {}
 
         if len(self.unpacked_visible_boxes) < self.num_visible_boxes:
             # If there are fewer boxes than the maximum number of visible boxes, add dummy boxes
@@ -391,10 +382,9 @@ class PackingEnv(gym.Env):
                 visible_box_sizes, (self.num_visible_boxes * 3,)
             )
             terminated = False
-            return self.state, reward, terminated, {}
+            return self.state, reward, terminated, truncated, {}
 
-    # @property
-    def action_masks(self) -> List[bool]:
+    def action_masks(self) -> NDArray:
         """Get the action mask from the env.
           Parameters
         Returns
@@ -415,7 +405,12 @@ class PackingEnv(gym.Env):
             act_mask[index] = np.reshape(
                 acm, (self.container.size[0] * self.container.size[1],)
             )
-        return [x == 1 for x in act_mask.flatten()]
+        return np.asarray(act_mask.flatten() == 1, dtype=bool)
+
+    @property
+    def get_action_mask(self) -> NDArray:
+        """Compatibility accessor used by legacy tests and wrappers."""
+        return self.action_masks().astype(np.int8)
 
     def render(self, mode=None) -> Union[go.Figure, NDArray]:
 
@@ -425,7 +420,10 @@ class PackingEnv(gym.Env):
         """
 
         if mode is None:
-            pass
+            mode = self.render_mode
+
+        if mode is None:
+            return None
 
         elif mode == "human":
             fig = self.container.plot()
@@ -450,11 +448,11 @@ class PackingEnv(gym.Env):
 
 if __name__ == "__main__":
     from src.utils import boxes_generator
-    from gym import make
+    from gymnasium import make
     import warnings
     from plotly_gif import GIF
 
-    # Ignore plotly and gym deprecation warnings
+    # Ignore plotly and gymnasium deprecation warnings
     warnings.filterwarnings("ignore", category=DeprecationWarning)
 
     # Environment initialization
@@ -464,16 +462,16 @@ if __name__ == "__main__":
         box_sizes=boxes_generator([10, 10, 10], 64, 42),
         num_visible_boxes=1,
     )
-    obs = env.reset()
+    obs, _ = env.reset()
 
     gif = GIF(gif_name="random_rollout.gif", gif_path="../gifs")
     for step_num in range(80):
         fig = env.render()
         gif.create_image(fig)
-        action_mask = obs["action_mask"]
+        action_mask = env.get_action_mask
         action = env.action_space.sample(mask=action_mask)
-        obs, reward, done, info = env.step(action)
-        if done:
+        obs, reward, terminated, truncated, info = env.step(action)
+        if terminated or truncated:
             break
 
     gif.create_gif()

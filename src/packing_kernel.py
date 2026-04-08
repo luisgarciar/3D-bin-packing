@@ -25,7 +25,7 @@ from typing import List, Type
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from nptyping import NDArray, Int, Shape
+from numpy.typing import NDArray
 
 from src.utils import (
     generate_vertices,
@@ -228,8 +228,8 @@ class Container:
 
     def __init__(
         self,
-        size: NDArray[Shape["1,3"], Int],
-        position: NDArray[Shape["1,3"], Int] = None,
+        size: NDArray,
+        position: NDArray = None,
         id_: int = 0,
     ) -> None:
         """Initializes a 3D container
@@ -410,7 +410,7 @@ class Container:
 
     def action_mask(
         self, box: Box, check_area: int = 100
-    ) -> NDArray[Shape["*, *"], Int]:
+    ) -> NDArray:
         """Returns an array with all possible positions for a box in the container
         array[i,j] = 1 if the box can be placed in position (i,j), 0 otherwise
 

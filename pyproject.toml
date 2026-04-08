@@ -14,7 +14,6 @@ authors = [
 ]
 dependencies = [
   "gymnasium>=0.29.1",
-  "nptyping>=2.5.0",
   "numpy>=1.26,<3",
   "pillow>=10.0.0",
   "plotly>=5.9.0",

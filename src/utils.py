@@ -6,7 +6,7 @@ from copy import deepcopy
 from typing import List
 
 import numpy as np
-from nptyping import NDArray, Int, Shape
+from numpy.typing import NDArray
 
 
 def boxes_generator(
@@ -73,7 +73,7 @@ def boxes_generator(
 
 def generate_vertices(
     cuboid_len_edges: NDArray, cuboid_position: NDArray
-) -> NDArray[Shape["3, 8"], Int]:
+) -> NDArray[np.int32]:
     """Generates the vertices of a box or container in the correct format to be plotted
 
     Parameters
