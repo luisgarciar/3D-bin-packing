@@ -1,6 +1,6 @@
 import warnings
 
-import gym
+import gymnasium as gym
 from sb3_contrib.ppo_mask import MaskablePPO
 from stable_baselines3.common.env_checker import check_env
 
@@ -77,15 +77,16 @@ if __name__ == "__main__":
     print("done training")
     model.save("ppo_mask")
 
-    obs = orig_env.reset()
+    obs, _ = orig_env.reset()
     done = False
     gif = GIF(gif_name="trained_5boxes.gif", gif_path="../gifs")
     figs = []
 
     while not done:
         action, _states = model.predict(obs, deterministic=True)
-        obs, rewards, done, info = orig_env.step(action)
-        fig = env.render(mode="human")
+        obs, rewards, terminated, truncated, info = orig_env.step(action)
+        done = terminated or truncated
+        fig = env.render()
         fig_png = fig.to_image(format="png")
         buf = io.BytesIO(fig_png)
         img = Image.open(buf)

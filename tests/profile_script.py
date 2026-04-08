@@ -2,8 +2,8 @@ import io
 
 import numpy as np
 from PIL import Image
-from gym import make
-from gym.envs.registration import register
+from gymnasium import make
+from gymnasium.envs.registration import register
 from src.utils import boxes_generator
 
 
@@ -30,7 +30,6 @@ if __name__ == "__main__":
 
     env = make(
         "PackingEnv",
-        new_step_api=False,
         container_size=[11, 11, 11],
         box_sizes=boxes_generator([10, 10, 10], num_items=80, seed=5),
         num_visible_boxes=1,
@@ -38,16 +37,17 @@ if __name__ == "__main__":
     )
 
     # Run the random agent without saving the gif
-    obs = env.reset()
+    obs, _ = env.reset()
+    env_u = env.unwrapped
     images = []
     for step_num in range(80):
-        action_mask = obs["action_mask"]
-        action = env.action_space.sample(action_mask)
-        obs, reward, done, info = env.step(action)
+        action_mask = env_u.get_action_mask
+        action = env.action_space.sample(mask=action_mask)
+        obs, reward, terminated, truncated, info = env.step(action)
         print(step_num)
-        if done:
+        if terminated or truncated:
             break
 
     warnings.filterwarnings("ignore", category=DeprecationWarning)
-    fig = env.container.plot()
+    fig = env_u.container.plot()
     fig.show()

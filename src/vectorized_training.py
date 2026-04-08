@@ -1,6 +1,7 @@
 import warnings
-import gym
-from numpy.typing import NDArray, List
+import gymnasium as gym
+from typing import List
+from numpy.typing import NDArray
 from sb3_contrib.common.wrappers import ActionMasker
 from sb3_contrib.ppo_mask import MaskablePPO
 from stable_baselines3.common.callbacks import CheckpointCallback
@@ -54,7 +55,7 @@ def make_env(
 
 
 if __name__ == "__main__":
-    # Ignore plotly and gym deprecation warnings
+    # Ignore plotly and gymnasium deprecation warnings
 
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     # Environment initialization
