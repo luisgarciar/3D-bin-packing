@@ -8,5 +8,6 @@ theme:
 
 nav:
   - Home: index.md
-  - State, Action, and Reward Definition: def.md
+  - State, Action, and Reward Definition: state-action-reward-definition.md
+
 
