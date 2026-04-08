@@ -17,8 +17,19 @@ algorithm described in [Ranked Reward: Enabling Self-Play Reinforcement Learning
 (Algorithm 2, Appendix).
 
 ## Documentation
-The documentation for this project is located in the `doc` folder, with a complete description of the state and 
-action space as well as the rewards to be used for RL training.
+The documentation source lives in the `docs` folder and is served with MkDocs.
+
+Run docs locally:
+
+```bash
+uv run mkdocs serve
+```
+
+Build docs:
+
+```bash
+uv run mkdocs build --strict
+```
 
 ## Installation instructions
 We recommend Python 3.12. Install [uv](https://docs.astral.sh/uv/) and then run:
@@ -79,6 +90,6 @@ The following updates have been made to the repository:
 
 ## Update: 4/8/2026
 The following updates have been made to the repository:
-- Migrated build system from `requirements.txt` to modern `pyproject.toml` with `uv` package manager and `uv.lock` for reproducible builds.
+- Migrated build system to modern `pyproject.toml` with `uv` package manager and `uv.lock` for reproducible builds.
 - Updated Python support to 3.12 and removed legacy Python <3.12 compatibility.
 - Migrated environment and training code from legacy `gym` to modern `gymnasium` API (updated `reset()`, `step()`, and action masking interfaces).

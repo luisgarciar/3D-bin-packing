@@ -25,6 +25,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "jupyter",
+  "mkdocs>=1.6.0",
+  "mkdocs-material>=9.6.0",
   "pytest>=7.1.2"
 ]
 

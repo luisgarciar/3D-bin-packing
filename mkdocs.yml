@@ -1,0 +1,12 @@
+site_name: 3D Bin Packing Optimization
+site_description: Documentation for the 3D bin packing Gymnasium environment
+repo_name: luisgarciar/3D-bin-packing
+repo_url: https://github.com/luisgarciar/3D-bin-packing
+
+theme:
+  name: material
+
+nav:
+  - Home: index.md
+  - State, Action, and Reward Definition: def.md
+
