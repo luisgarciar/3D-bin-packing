@@ -1,24 +1,4 @@
-"""
-Packing Engine: Basic Classes for the Bin Packing Problem
-We follow the space representation depicted below, all coordinates and lengths of boxes and containers are integers.
-
-    x: depth
-    y: length
-    z: height
-
-       Z
-       |
-       |
-       |________Y
-      /
-     /
-    X
-
-    Classes:
-        Box
-        Container
-
-"""
+"""Core geometric primitives for 3D bin packing."""
 from copy import deepcopy
 from typing import List, Type
 
@@ -36,33 +16,29 @@ from src.utils import (
 
 
 class Box:
-    """A class to represent a 3D box
+    """Represent a 3D box.
 
     Attributes
     ----------
-     id_: int
-           id of the box
-     position: int
-           Coordinates of the position of the bottom-leftmost-deepest corner of the box
-     size: int
-           Lengths of the edges of the box
+    id_ : int
+        Box identifier.
+    position : NDArray
+        Coordinates of the bottom-leftmost-deepest corner.
+    size : NDArray
+        Edge lengths in ``(x, y, z)`` order.
     """
 
     def __init__(self, size: List[int], position: List[int], id_: int) -> None:
-        """Initializes a box object
+        """Initialize a box object.
 
         Parameters
         ----------
-        size: List[int]
+        size : List[int]
             Lengths of the edges of the box in the order (x, y, z) = (depth, length, height)
-        position: List[int]
+        position : List[int]
             Coordinates of the position of the bottom-leftmost-deepest corner of the box
-        id_: int
-            id of the box
-
-        Returns
-        -------
-        Box object
+        id_ : int
+            Box identifier.
         """
         assert len(size) == len(
             position
@@ -81,11 +57,12 @@ class Box:
         self.size = np.asarray(size)
 
     def rotate(self, rotation: int) -> None:
-        """Rotates the box in place
+        """Rotate the box in place.
 
         Parameters
         ----------
-        rotation: int
+        rotation : int
+            Rotation code (reserved for future implementation).
         """
         pass  # to be added later
 
@@ -112,16 +89,19 @@ class Box:
         )
 
     def plot(self, color, figure: Type[go.Figure] = None) -> Type[go.Figure]:
-        """Adds the plot of a box to a given figure
+        """Add a box mesh to a Plotly figure.
 
          Parameters
          ----------
-        figure: go.Figure
-             A plotly figure where the box should be plotted
+        color : str
+            Face color for the rendered box.
+        figure : go.Figure, optional
+            Figure where the box should be rendered. If ``None``, a new figure is created.
 
          Returns
          -------
-         go.Figure
+        go.Figure
+            Figure containing the box trace.
         """
         # Generate the coordinates of the vertices
         vertices = generate_vertices(self.size, self.position).T
@@ -209,21 +189,21 @@ class Box:
 
 
 class Container:
-    """A class to represent a 3D container
+    """Represent a 3D container.
 
     Attributes
     ----------
-    id_: int
-        id of the container
-    size: NDArray[Shape["1,3"],Int]
-        Lengths of the edges of the container
-    position: NDArray[Shape["1,3"],Int]
-        Coordinates of the bottom-leftmost-deepest corner of the container
-    boxes: List[Box]
-        List with the boxes placed inside the container
-    height_map: NDArray[Shape["*,*"],Int]
-        An array of size (size[0],size[1]) representing the height map (top view) of the container,
-        where height_map[i,j] is the current height of stacked items at position (i,j).
+    id_ : int
+        Container identifier.
+    size : NDArray
+        Edge lengths of the container.
+    position : NDArray
+        Coordinates of the bottom-leftmost-deepest corner.
+    boxes : List[Box]
+        Boxes currently placed inside the container.
+    height_map : NDArray
+        Height map (top view) where ``height_map[i, j]`` stores stacked height at
+        position ``(i, j)``.
     """
 
     def __init__(
@@ -232,16 +212,16 @@ class Container:
         position: NDArray = None,
         id_: int = 0,
     ) -> None:
-        """Initializes a 3D container
+        """Initialize a 3D container.
 
         Parameters
         ----------
-        id_: int, optional
-            id of the container (default = 0)
-        positions: int, optional
+        size : NDArray
+            Lengths of the container edges.
+        position : NDArray, optional
             Coordinates of the bottom-leftmost-deepest corner of the container (default = 0,0,0)
-        size: int
-            Lengths of the edges of the container
+        id_ : int, optional
+            Container identifier (default is ``0``).
         """
 
         if position is None:
@@ -274,11 +254,12 @@ class Container:
         self.height_map = np.zeros(shape=[self.size[0], self.size[1]], dtype=np.int32)
 
     def _update_height_map(self, box):
-        """Updates the height map after placing a box
+        """Update the height map after placing a box.
+
          Parameters
         ----------
-        box: Box
-             Box to be placed inside the container
+        box : Box
+            Box placed inside the container.
         """
         # Add the height of the new box in the x-y coordinates occupied by the box
         self.height_map[
@@ -299,19 +280,21 @@ class Container:
     def check_valid_box_placement(
         self, box: Box, new_pos: NDArray, check_area: int = 100
     ) -> int:
-        """
+        """Validate whether a box can be placed at a given position.
+
         Parameters
         ----------
-        box: Box
+        box : Box
             Box to be placed
-        new_pos: NDArray[int]
+        new_pos : NDArray
             Coordinates of new position
-        check_area: int, default = 100
+        check_area : int, default=100
              Percentage of area of the bottom of the box that must be supported in the new position
 
         Returns
         -------
         int
+            ``1`` if placement is valid, otherwise ``0``.
         """
         assert len(new_pos) == 2
 
@@ -323,7 +306,7 @@ class Container:
         # Generate the vertices of the bottom face of the container
         w = generate_vertices(self.size, self.position)
         # bottom vertices of the container
-        w0, w1, w2, w3 = w[0, :], w[1, :], w[2, :], w[3, :]
+        w0, w3 = w[0, :], w[3, :]
 
         # Check if the bottom vertices of the box are inside the container
         cond_0 = np.all(np.logical_and(v0[0:2] >= w0[0:2], v0[0:2] <= w3[0:2]))

@@ -26,7 +26,9 @@ dependencies = [
 dev = [
   "jupyter",
   "mkdocs>=1.6.0",
+  "mkdocstrings[python]>=0.28.0",
   "mkdocs-material>=9.6.0",
+  "ruff>=0.13.0",
   "pytest>=7.1.2"
 ]
 
@@ -36,5 +38,10 @@ packages = ["src"]
 [tool.pytest.ini_options]
 markers = [
   "integtest: marks integration-style tests"
+]
+
+[tool.ruff]
+exclude = [
+  "nb",
 ]
 

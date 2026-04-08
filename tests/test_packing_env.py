@@ -3,7 +3,6 @@ import random as rd
 import gymnasium as gym
 import numpy as np
 import pytest
-from gymnasium.utils.env_checker import check_env
 from numpy.testing import assert_array_equal
 from src.packing_env import PackingEnv
 from src.utils import boxes_generator

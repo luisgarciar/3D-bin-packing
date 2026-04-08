@@ -169,19 +169,21 @@ def cuboids_intersection(cuboid_a: List[int], cuboid_b: List[int]) -> bool:
 
 
 def cuboid_fits(cuboid_a: List[int], cuboid_b: List[int]) -> bool:
-    """Checks if cuboid_b fits into cuboid_a.
+    """Check whether ``cuboid_b`` fits inside ``cuboid_a``.
+
     Parameters
     ----------
-    cuboid_a: List[int]
+    cuboid_a : List[int]
         List of length 6 [x_min_a, y_mina, z_min_a, x_max_a, y_max_a, z_max_a]
         with the start and end coordinates of the first cuboid in each axis
-    cuboid_b: List[int]
+    cuboid_b : List[int]
         List of length 6 [x_min_b, y_min_b, z_min_b, x_max_b, y_max_b, z_max_b]
         with the start and end coordinates of the second cuboid in each axis
+
     Returns
     -------
     bool
-    True if the cuboid_b fits into cuboid_a, False otherwise
+        ``True`` if ``cuboid_b`` fits into ``cuboid_a``, ``False`` otherwise.
     """
     assert len(cuboid_a) == 6, "cuboid_a must be a list of length 3"
     assert len(cuboid_b) == 6, "cuboid_b must be a list of length 3"

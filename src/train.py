@@ -20,17 +20,29 @@ def make_env(
     random_boxes=False,
     only_terminal_reward=False,
 ):
-    """
-    Parameters
+    """Create a configured packing environment instance.
 
+    Parameters
     ----------
-    container_size: size of the container
-    num_boxes: number of boxes to be packed
-    num_visible_boxes: number of boxes visible to the agent
-    seed: seed for RNG
-    render_mode: render mode for the environment
-    random_boxes: whether to use random boxes or not
-    only_terminal_reward: whether to use only terminal reward or not
+    container_size : list[int]
+        Container dimensions in the form ``[x, y, z]``.
+    num_boxes : int
+        Number of boxes to generate for the episode.
+    num_visible_boxes : int, default=1
+        Number of boxes exposed to the policy at each step.
+    seed : int, default=0
+        Random seed used during box generation.
+    render_mode : str | None, default=None
+        Gymnasium render mode.
+    random_boxes : bool, default=False
+        If ``True``, regenerate boxes on each environment reset.
+    only_terminal_reward : bool, default=False
+        If ``True``, emit reward only at episode termination.
+
+    Returns
+    -------
+    gym.Env
+        A ``PackingEnv-v0`` environment.
     """
     env = gym.make(
         "PackingEnv-v0",

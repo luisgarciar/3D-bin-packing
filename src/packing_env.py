@@ -1,24 +1,4 @@
-"""
-Packing Gymnasium: A Gymnasium environment for 3D packing problems.
-We follow the space representation depicted below, all coordinates and lengths of boxes and containers are integers.
-
-    x: depth
-    y: length
-    z: height
-
-       Z
-       |
-       |
-       |________Y
-      /
-     /
-    X
-
-    Classes:
-        Box
-        Container
-
-"""
+"""Gymnasium environment for 3D bin packing."""
 import copy
 from typing import List, Tuple, Union
 
@@ -33,47 +13,17 @@ from src.utils import boxes_generator
 
 
 class PackingEnv(gym.Env):
-    """A class to represent the packing environment.
+    """3D bin-packing environment with masked discrete actions.
 
-    Description:
-        The environment consists of a 3D container and an initial list of 3D boxes, the goal
-        is to pack the boxes into the container minimizing the empty space. We assume
-        that the container is loaded from the top.
+    Notes
+    -----
+    The observation is a dictionary with:
 
-        The state of the container is represented by a 2D array storing the height map (top view)
-        of the container (see the documentation of packing_engine.Container.height_map
-        for a detailed explanation) and a list of sizes of the upcoming boxes.
+    - ``height_map``: flattened 2D container height map.
+    - ``visible_box_sizes``: flattened sizes of currently visible boxes.
 
-        Observation:
-        Type:  Dict(2)
-
-        Key             Description                       Shape - Type:int                       (Min,Max) - Type:int
-        height_map      Top view of the container         (container.size[0],container.size[1])  (0,container.size[2])
-                        with heights of boxes already
-                        placed
-                        Type: MultiDiscrete
-
-        box_sizes       Array with sizes of the upcoming   (num_upcoming_boxes, 3)               (1, container.size[2])
-                        boxes
-
-
-        Action:
-        Type:  Discrete(container.size[0]*container.size[1]*num_visible_boxes)
-        The agent chooses an integer j in the range [0, container.size[0]*container.size[1]*num_visible_boxes)),
-        and the action is interpreted as follows: the box with index  j // (container.size[0]*container.size[1])
-        is placed in the position (x,y) = (j//container.size[1], j%container.size[1]) in the container.
-
-        Reward:
-        At the end of the episode a reward is given to the agent, the reward equals the ratio between the volume
-        of the packed boxes and the volume of the container.
-
-        Starting State:
-        height_map is initialized as a zero array and the list of upcoming boxes is initialized as a random list of
-        length num_visible_boxes from the complete list of boxes.
-
-        Episode Termination:
-        The episode is terminated when all the boxes are placed in the container or when no more boxes can be packed
-        in the container.
+    Actions are integer indices over ``(box_index, x, y)`` combinations for the
+    visible boxes and container grid locations.
     """
 
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
@@ -88,13 +38,24 @@ class PackingEnv(gym.Env):
         random_boxes: bool = False,
         only_terminal_reward: bool = True,
     ) -> None:
-        """Initialize the environment.
+        """Initialize the packing environment.
 
-         Parameters
-        ----------:
-            container_size: size of the container in the form [lx,ly,lz]
-            box_sizes: sizes of boxes to be placed in the container in the form [[lx,ly,lz],...]
-            num_visible_boxes: number of boxes visible to the agent
+        Parameters
+        ----------
+        container_size : List[int]
+            Container size in the form ``[x, y, z]``.
+        box_sizes : List[List[int]]
+            Sizes of all boxes to place.
+        num_visible_boxes : int, default=1
+            Number of boxes visible to the agent at each step.
+        render_mode : str | None, default=None
+            Gymnasium render mode.
+        options : dict | None, default=None
+            Reserved for Gymnasium compatibility.
+        random_boxes : bool, default=False
+            If ``True``, regenerate boxes each time ``reset`` is called.
+        only_terminal_reward : bool, default=True
+            If ``True``, return reward only at episode termination.
         """
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
@@ -169,18 +130,17 @@ class PackingEnv(gym.Env):
         )
 
     def action_to_position(self, action: int) -> Tuple[int, NDArray]:
-        """Converts an index to a tuple with a box index
-        and a position in the container.
+        """Convert a flat action index to box index and grid position.
+
         Parameters
         ----------
-            action: int
-                Index to be converted.
+        action : int
+            Encoded action.
+
         Returns
         -------
-            box_index: int
-                Index of the box to be placed.
-            position: ndarray
-                Position in the container.
+        Tuple[int, NDArray]
+            Pair ``(box_index, position)`` for the selected action.
         """
         box_index = action // (self.container.size[0] * self.container.size[1])
         res = action % (self.container.size[0] * self.container.size[1])
@@ -192,11 +152,19 @@ class PackingEnv(gym.Env):
         return box_index, position.astype(np.int32)
 
     def position_to_action(self, position, box_index=0):
-        """Converts a position in the container to an action index
+        """Convert a box index and position to a flat action index.
+
+        Parameters
+        ----------
+        position : Sequence[int]
+            Target position in the container grid.
+        box_index : int, default=0
+            Index of the selected visible box.
+
         Returns
         -------
-            action: int
-                Index in the container.
+        int
+            Encoded action index.
         """
         action = (
             box_index * self.container.size[0] * self.container.size[1]
@@ -206,16 +174,19 @@ class PackingEnv(gym.Env):
         return action
 
     def reset(self, seed=None, options=None) -> Tuple:
-        """Reset the environment.
+        """Reset the environment state.
+
         Parameters
         ----------
-            seed: int
-                Seed for the environment.
-            options: dict
-                Options for the environment.
+        seed : int | None
+            Random seed used by Gymnasium.
+        options : dict | None
+            Additional reset options (unused).
+
         Returns
-        ----------
-            obs, info: Tuple with the initial state and a dictionary with information of the environment.
+        -------
+        Tuple[dict, dict]
+            Initial observation and info dictionary.
         """
 
         super().reset(seed=seed)
@@ -263,10 +234,17 @@ class PackingEnv(gym.Env):
         return self.state, {}
 
     def calculate_reward(self, reward_type: str = "terminal_step") -> float:
-        """calculate the reward for the action.
-        Returns:
+        """Calculate reward according to the configured reward mode.
+
+        Parameters
         ----------
-            reward: Reward for the action.
+        reward_type : str, default="terminal_step"
+            Reward strategy, either ``terminal_step`` or ``interm_step``.
+
+        Returns
+        -------
+        float
+            Reward value.
         """
         # Volume of packed boxes
         packed_volume = np.sum([box.volume for box in self.packed_boxes])
@@ -293,17 +271,17 @@ class PackingEnv(gym.Env):
         return reward
 
     def step(self, action: int) -> Tuple[NDArray, float, bool, bool, dict]:
-        """Step the environment.
-        Parameters:
-        -----------
-            action: integer with the action to be taken.
-        Returns:
+        """Apply one environment step.
+
+        Parameters
         ----------
-            observation: Dictionary with the observation of the environment.
-            reward: Reward for the action.
-            terminated: Whether the episode is terminated.
-            truncated: Whether the episode is truncated.
-            info: Dictionary with additional information.
+        action : int
+            Encoded action selected by the policy.
+
+        Returns:
+        -------
+        Tuple[dict, float, bool, bool, dict]
+            Observation, reward, terminated flag, truncated flag, and info.
         """
         truncated = False
 
@@ -385,11 +363,13 @@ class PackingEnv(gym.Env):
             return self.state, reward, terminated, truncated, {}
 
     def action_masks(self) -> NDArray:
-        """Get the action mask from the env.
-          Parameters
+        """Return a boolean mask of valid actions.
+
         Returns
         ----------
-            np.ndarray: Array with the action mask."""
+        NDArray
+            Flattened boolean action mask.
+        """
         act_mask = np.zeros(
             shape=(
                 self.num_visible_boxes,
@@ -413,10 +393,17 @@ class PackingEnv(gym.Env):
         return self.action_masks().astype(np.int8)
 
     def render(self, mode=None) -> Union[go.Figure, NDArray]:
-
         """Render the environment.
-        Args:
-            mode: Mode to render the environment.
+
+        Parameters
+        ----------
+        mode : str | None
+            Render mode. If ``None``, uses ``self.render_mode``.
+
+        Returns
+        -------
+        go.Figure | NDArray | None
+            Plotly figure for ``human``, image array for ``rgb_array``, or ``None``.
         """
 
         if mode is None:

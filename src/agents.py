@@ -4,13 +4,17 @@ from typing import Dict
 
 
 def rnd_agent(observation: Dict) -> Dict:
-    """Random agent for the packing environment.
+    """Return a simple deterministic action for the packing environment.
 
-    Args:
-        observation (dict): Environment observation.
+    Parameters
+    ----------
+    observation : Dict
+        Current environment observation (unused by this baseline policy).
 
-    Returns:
-        action (dict): Action to be taken.
+    Returns
+    -------
+    Dict
+        Action dictionary with the selected `position` and `box_index`.
     """
     action = {"position": [0, 0], "box_index": 0}
     return action

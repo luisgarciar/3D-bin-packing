@@ -6,8 +6,31 @@ repo_url: https://github.com/luisgarciar/3D-bin-packing
 theme:
   name: material
 
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: numpy
+            show_source: false
+            show_root_heading: true
+            show_signature_annotations: true
+            separate_signature: true
+            merge_init_into_class: true
+            show_if_no_docstring: false
+            members_order: source
+            filters:
+              - "!^_"
+
 nav:
   - Home: index.md
   - State, Action, and Reward Definition: state-action-reward-definition.md
+  - API Reference:
+      - Overview: api.md
+      - Packing Environment: api/packing-env.md
+      - Packing Kernel: api/packing-kernel.md
+      - Utilities: api/utilities.md
 
 

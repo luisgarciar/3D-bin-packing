@@ -13,6 +13,18 @@ from src.utils import boxes_generator
 
 
 def mask_fn(env: gym.Env) -> NDArray:
+    """Return the action mask used by ``ActionMasker``.
+
+    Parameters
+    ----------
+    env : gym.Env
+        Wrapped packing environment.
+
+    Returns
+    -------
+    NDArray
+        Binary action mask compatible with Maskable PPO.
+    """
     return env.get_action_mask
 
 
@@ -25,21 +37,29 @@ def make_env(
     random_boxes=False,
     only_terminal_reward=False,
 ) -> gym.Env:
-    """
-    Utility function for building environments for the bin packing problem.
+    """Build a masked packing environment for vectorized training.
+
     Parameters
     ----------
-    container_size
-    num_boxes
-    num_visible_boxes
-    seed
-    render_mode
-    random_boxes
-    only_terminal_reward
+    container_size : List[int]
+        Container dimensions in the form ``[x, y, z]``.
+    num_boxes : int, default=10
+        Number of generated boxes per episode.
+    num_visible_boxes : int, default=10
+        Number of boxes visible to the agent at each step.
+    seed : int, default=0
+        Random seed used in instance generation.
+    render_mode : str, default="rgb_array"
+        Gymnasium render mode.
+    random_boxes : bool, default=False
+        If ``True``, generate new boxes on each reset.
+    only_terminal_reward : bool, default=False
+        If ``True``, return reward only at terminal state.
 
     Returns
     -------
-
+    gym.Env
+        Environment wrapped with ``ActionMasker``.
     """
     env = gym.make(
         "PackingEnv-v0",
