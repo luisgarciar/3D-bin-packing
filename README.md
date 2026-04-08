@@ -71,7 +71,7 @@ The following updates have been made to the repository:
 The following updates have been made to the repository:
 - Added functionality for saving rollouts of a policy in a .gif file and
 - Added a demo notebook for the random policy.
-- Updated the requirements.txt file with the required packages.
+- Updated the project dependencies.
 - Added a demo script for training agents with Maskable PPO. 
 
 ## Update: 7/1/2023 
