@@ -1,7 +1,5 @@
 # 3D Bin Packing Optimization
 
-Repository for the Capstone Project 3D Packing Optimization of the [Fourthbrain Machine Learning Engineer program](https://www.fourthbrain.ai/machine-learning-engineer).
-
 This repository contains an environment compatible with [Gymnasium's API](https://gymnasium.farama.org/) to solve the 
 3D bin packing problem with reinforcement learning (RL).
 
@@ -78,3 +76,9 @@ The following updates have been made to the repository:
 The following updates have been made to the repository:
 - Updated the demo notebook for training agents with Maskable PPO in Google colab.
 - Fixed issues with the tests.
+
+## Update: 4/8/2026
+The following updates have been made to the repository:
+- Migrated build system from `requirements.txt` to modern `pyproject.toml` with `uv` package manager and `uv.lock` for reproducible builds.
+- Updated Python support to 3.12 and removed legacy Python <3.12 compatibility.
+- Migrated environment and training code from legacy `gym` to modern `gymnasium` API (updated `reset()`, `step()`, and action masking interfaces).
