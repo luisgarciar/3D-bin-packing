@@ -2,7 +2,7 @@
 
 Repository for the Capstone Project 3D Packing Optimization of the [Fourthbrain Machine Learning Engineer program](https://www.fourthbrain.ai/machine-learning-engineer).
 
-This repository contains an environment compatible with [OpenAI Gym's API](https://github.com/openai/gym) to solve the 
+This repository contains an environment compatible with [Gymnasium's API](https://gymnasium.farama.org/) to solve the 
 3D bin packing problem with reinforcement learning (RL).
 
 
@@ -23,36 +23,47 @@ The documentation for this project is located in the `doc` folder, with a comple
 action space as well as the rewards to be used for RL training.
 
 ## Installation instructions
-We recommend that you create a virtual environment with Python 3.8 (for example, using conda environments). 
-In your terminal window, activate your environment and clone the repository:
-``` 
+We recommend Python 3.12. Install [uv](https://docs.astral.sh/uv/) and then run:
+
+```bash
 git clone https://github.com/luisgarciar/3D-bin-packing.git
+cd 3D-bin-packing
+uv sync --extra dev
 ```
 
-To run the code, you need to install a few dependencies. Go to the cloned directory and install the required packages:
-```
-cd 3D-bin-packing
-pip install -r requirements.txt
+This creates a local `.venv` and installs all runtime and development dependencies from `pyproject.toml`.
+
+## Running code and tests
+Run Python commands through `uv` so they execute in the managed environment:
+
+```bash
+uv run pytest
+uv run python src/train.py
 ```
 
 ## Packing engine
-The module `packing_engine` (located in `src/packing_engine.py`) implements the `Container` and `Box` objects that are 
-used in the Gym environment. To add custom features (for example, to allow rotations), see the documentation of this module.
+The module `packing_kernel` (located in `src/packing_kernel.py`) implements the `Container` and `Box` objects that are 
+used in the Gymnasium environment. To add custom features (for example, to allow rotations), see the documentation of this module.
 
 ## Environment
-The Gym environment is implemented in the module `src/packing_env.py`.
+The Gymnasium environment is implemented in the module `src/packing_env.py`.
 
 ## Demo notebooks
 A demo notebook `demo_ffd` implementing the heuristic-based method 'First Fit Decreasing' is available in the `nb` 
 folder.
 
 ## Unit tests
-The folder `tests` contains unit tests to be run with pytest.
+The folder `tests` contains unit tests to be run with pytest (`uv run pytest`).
+
+## CI/CD
+GitHub Actions pipelines are available in `.github/workflows`:
+- `ci.yml`: runs tests on pushes to `main` and pull requests (Python 3.12).
+- `release.yml`: builds distribution artifacts on version tags (`v*`) and publishes a GitHub release with the built files.
 
 ## Update: 22/08/2022
 The following updates have been made to the repository:
-- Added the `packing_env.py` file with the Gym environment.
-- Added unit tests for the Gym environment.
+- Added the `packing_env.py` file with the Gymnasium environment.
+- Added unit tests for the Gymnasium environment.
 - Updated the documentation with the full description of the state and action space.
 - Updated the demo notebooks.
 

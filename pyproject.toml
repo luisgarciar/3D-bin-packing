@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "3d-bin-packing"
+version = "0.1.0"
+description = "3D bin packing optimization environment and training utilities"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Luis Garcia" }
+]
+dependencies = [
+  "gymnasium>=0.29.1",
+  "nptyping>=2.5.0",
+  "numpy>=1.26,<3",
+  "pillow>=10.0.0",
+  "plotly>=5.9.0",
+  "plotly-gif>=0.0.3",
+  "sb3-contrib>=2.3.0",
+  "stable-baselines3>=2.3.2"
+]
+
+[project.optional-dependencies]
+dev = [
+  "jupyter",
+  "pytest>=7.1.2"
+]
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.pytest.ini_options]
+markers = [
+  "integtest: marks integration-style tests"
+]
+
